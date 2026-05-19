@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sessionIdEl = document.getElementById('sessionId');
         if (sessionIdEl) sessionIdEl.textContent = id;
       } else if (btn.classList.contains('export-btn')) {
-        window.open(`/api/export/${id}?format=csv`, '_blank');
+        window.open(`/api/export/${id}?format=xls`, '_blank');
       } else if (btn.classList.contains('stop-btn')) {
         sendMessage({ type: 'stop_test' });
       } else if (btn.classList.contains('delete-btn')) {

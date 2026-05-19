@@ -42,7 +42,7 @@ function handleExport() {
     showNotification('No active session to export', 'error');
     return;
   }
-  window.open(`/api/export/${sessionId}?format=csv`, '_blank');
+  window.open(`/api/export/${sessionId}?format=xls`, '_blank');
 }
 
 export function onTestStarted(data) {
