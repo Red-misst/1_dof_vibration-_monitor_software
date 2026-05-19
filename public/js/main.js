@@ -30,10 +30,6 @@ window.showNotification = function(message, type = 'info') {
   setTimeout(() => toast.remove(), 3500);
 };
 
-// Expose legacy globals for compatibility
-window.updateChatSessionSelector = updateChatSessionSelector;
-window.addSessionToChat = addSessionToChat;
-window.updateReportSessions = updateSessionsDropdown;
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[App] Initializing Z-Axis Vibration Monitor v2.0 (Offline)');
