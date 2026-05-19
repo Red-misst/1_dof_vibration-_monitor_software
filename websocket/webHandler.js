@@ -5,6 +5,7 @@
  */
 
 import * as db from '../server/db.js';
+import { analyzeBatch } from '../server/dsp/analyzer.js';
 
 let webClients;
 let espClients;
@@ -76,10 +77,9 @@ async function routeMessage(ws, data) {
 
     case 'start_test': {
       const sessionName = data.sessionName || `Z-Axis Test ${new Date().toLocaleTimeString()}`;
-      const testMass = parseFloat(data.testMass) || 1.0;
-      const session = db.createSession({ name: sessionName, testMass });
+      const session = db.createSession({ name: sessionName });
       setCurrentSession(session);
-      broadcastToWebClients({ type: 'test_started', sessionId: session.id, sessionName, testMass });
+      broadcastToWebClients({ type: 'test_started', sessionId: session.id, sessionName });
       break;
     }
 
@@ -106,13 +106,14 @@ async function routeMessage(ws, data) {
         break;
       }
       const vibData = db.getVibrationData(data.sessionId);
+      
       ws.send(JSON.stringify({
         type: 'session_data',
         sessionId: data.sessionId,
         data: vibData,
         frequencyData: {
-          frequencies: vibData.map(d => d.frequency).filter(Boolean),
-          amplitudes: vibData.map(d => d.amplitude).filter(Boolean),
+          frequencies: session.mechanicalProperties?.frequencies || vibData.map(d => d.frequency).filter(Boolean),
+          magnitudes: session.mechanicalProperties?.magnitudes || vibData.map(d => d.amplitude).filter(Boolean),
           rawAccelerations: vibData.map(d => d.rawAcceleration).filter(Boolean),
           naturalFrequency: session.naturalFrequency,
           peakAmplitude: session.peakAmplitude,

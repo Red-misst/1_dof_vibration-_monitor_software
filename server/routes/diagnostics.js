@@ -7,6 +7,7 @@ import express from 'express';
 import os from 'os';
 import { dbHealthCheck } from '../db.js';
 import { getConnectedDevices, getWebClientCount } from '../../websocket/index.js';
+import llmManager from '../../utils/llmManager.js';
 
 const router = express.Router();
 
@@ -14,6 +15,9 @@ const router = express.Router();
 let aiStatus = { ok: null, lastCheck: null, message: 'Not checked yet' };
 export function setAiStatus(ok, message) {
   aiStatus = { ok, message, lastCheck: Date.now() };
+}
+export function getAiStatus() {
+  return aiStatus;
 }
 
 // Get local network IPs
@@ -42,7 +46,11 @@ router.get('/', (req, res) => {
       count: getConnectedDevices().length
     },
     webClients: getWebClientCount(),
-    ai: aiStatus,
+    ai: {
+      ...aiStatus,
+      provider: llmManager.provider,
+      model: llmManager.model
+    },
     network: {
       localIPs,
       hotspotIP,

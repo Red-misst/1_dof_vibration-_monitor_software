@@ -5,6 +5,8 @@
  */
 
 import * as db from '../server/db.js';
+import { analyzeBatch } from '../server/dsp/analyzer.js';
+
 
 // Shared state references (injected from WS index)
 let espClients;
@@ -40,7 +42,7 @@ export function handleESPConnection(ws) {
       return;
     }
 
-    if (data.type === 'fft_result') {
+    if (data.type === 'heartbeat') {
       const session = getCurrentSession();
       if (!session || !session.isActive) return;
 
@@ -50,8 +52,8 @@ export function handleESPConnection(ws) {
           deviceId: data.deviceId || 'unknown',
           timestamp: data.timestamp || Date.now(),
           deltaZ: data.deltaZ || 0,
-          frequency: data.frequency || 0,
-          amplitude: data.amplitude || 0,
+          frequency: 0,
+          amplitude: 0,
           rawAcceleration: data.raw_acceleration || 0
         });
 
@@ -61,14 +63,74 @@ export function handleESPConnection(ws) {
           deviceId: data.deviceId,
           timestamp: data.timestamp || Date.now(),
           deltaZ: data.deltaZ || 0,
-          frequency: data.frequency || 0,
-          amplitude: data.amplitude || 0,
           rawAcceleration: data.raw_acceleration || 0,
           receivedAt: new Date().toISOString(),
           isActive: true
         });
       } catch (err) {
-        console.error('[ESP] Error saving vibration data:', err.message);
+        console.error('[ESP] Error saving heartbeat data:', err.message);
+      }
+      return;
+    }
+
+    if (data.type === 'raw_batch') {
+      const session = getCurrentSession();
+      if (!session || !session.isActive) return;
+
+      try {
+        // Run High-Res FFT on Server
+        const analysis = analyzeBatch(data.data, data.sampleRate || 500);
+
+        // Save mechanical properties to session for long-term storage
+        db.updateSessionAnalysis(session.id, {
+          naturalFrequency: analysis.peakFrequency,
+          peakAmplitude: analysis.peakAmplitude,
+          mechanicalProperties: {
+             qFactor: analysis.qFactor,
+             dampingRatio: analysis.dampingRatio,
+             bandwidth: analysis.bandwidth,
+             frequencies: analysis.frequencies,
+             magnitudes: analysis.magnitudes
+          }
+        });
+
+        // Save representative point
+        db.insertVibrationData({
+          sessionId: session.id,
+          deviceId: data.deviceId || 'unknown',
+          timestamp: data.timestamp || Date.now(),
+          deltaZ: data.data[0] || 0, // approx
+          frequency: analysis.peakFrequency,
+          amplitude: analysis.peakAmplitude,
+          rawAcceleration: data.data[0] || 0
+        });
+
+        // Broadcast to clients
+        broadcastToWebClients({
+          type: 'vibration_data',
+          sessionId: session.id,
+          deviceId: data.deviceId,
+          timestamp: data.timestamp || Date.now(),
+          frequency: analysis.peakFrequency,
+          amplitude: analysis.peakAmplitude,
+          rawAcceleration: data.data[0] || 0,
+          deltaZ: data.data[0] || 0,
+          receivedAt: new Date().toISOString(),
+          isActive: true
+        });
+
+        // Broadcast full frequency spectrum separately if UI wants to draw it
+        broadcastToWebClients({
+           type: 'frequency_data',
+           frequency: analysis.peakFrequency,
+           amplitude: analysis.peakAmplitude,
+           qFactor: analysis.qFactor,
+           frequencies: analysis.frequencies,
+           magnitudes: analysis.magnitudes
+        });
+
+      } catch (err) {
+        console.error('[ESP] Error processing raw batch:', err.message);
       }
     }
   });

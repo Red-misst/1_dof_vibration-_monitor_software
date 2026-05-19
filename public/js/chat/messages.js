@@ -129,6 +129,7 @@ export async function sendChatMessage() {
   userMessageInput.value = '';
   addUserMessage(message);
   showTypingIndicator();
+  if (window.startLoading) window.startLoading();
 
   try {
     const response = await fetch('/api/chat/message', {
@@ -146,6 +147,8 @@ export async function sendChatMessage() {
     console.error('Error sending message:', error);
     removeTypingIndicator();
     if (window.showNotification) window.showNotification('Error sending message.', 'error');
+  } finally {
+    if (window.stopLoading) window.stopLoading();
   }
 }
 

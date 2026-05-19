@@ -5,8 +5,21 @@
 
 import express from 'express';
 import * as db from '../db.js';
+import { generatePDFManual } from '../../utils/pdfManualGenerator.js';
 
 const router = express.Router();
+
+router.get('/manual/pdf', async (req, res) => {
+  try {
+    const pdfBuffer = await generatePDFManual();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="Moi_University_Structural_Vibration_Manual.pdf"');
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('[Export] Failed to generate Manual PDF:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.get('/:sessionId', (req, res) => {
   try {

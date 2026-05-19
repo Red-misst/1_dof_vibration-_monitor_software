@@ -160,6 +160,11 @@
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
         }
         
+        select option {
+            background-color: #1e293b;
+            color: #f8fafc;
+        }
+        
         input:focus, select:focus {
             border-color: var(--accent-blue);
             background: rgba(10, 132, 255, 0.05);
@@ -206,39 +211,55 @@
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 16px;
-            padding: 16px 24px;
+            padding: 10px 24px;
+            background: rgba(10, 10, 12, 0.45);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-family: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
         }
         
-        .status-group { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
+        .status-group { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
         
         .status-item {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 0.95rem;
-            color: var(--text-secondary);
+            color: rgba(255, 255, 255, 0.4);
         }
         
         .status-item span.font-semibold { color: var(--text-primary); font-weight: 600; }
+
+        .status-text-connected {
+            color: var(--accent-green) !important;
+            text-shadow: 0 0 8px rgba(48, 209, 88, 0.4);
+        }
+
+        .status-text-disconnected {
+            color: var(--accent-red) !important;
+            text-shadow: 0 0 8px rgba(255, 69, 58, 0.4);
+        }
         
         .status-indicator {
-            width: 10px;
-            height: 10px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
-            background: var(--text-tertiary);
-            box-shadow: 0 0 8px currentColor;
+            background: rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
         }
-        .status-indicator.active { background: var(--accent-green); color: var(--accent-green); }
-        .status-indicator.error { background: var(--accent-red); color: var(--accent-red); }
+        .status-indicator.connected { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+        .status-indicator.disconnected { background: var(--accent-red); box-shadow: 0 0 8px var(--accent-red); }
+        .status-indicator.error { background: var(--accent-red); box-shadow: 0 0 8px var(--accent-red); }
 
         .session-badge {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--glass-border);
-            padding: 6px 12px;
-            border-radius: var(--radius-sm);
+            background: rgba(10, 132, 255, 0.1);
+            border: 1px solid rgba(10, 132, 255, 0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
             font-family: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.85rem;
-            color: var(--text-primary);
+            font-size: 0.72rem;
+            color: var(--accent-blue);
         }
 
         /* ==========================================================================
@@ -467,6 +488,14 @@
         /* ==========================================================================
            Chat Interface
            ========================================================================== */
+        #chatFab:hover {
+            transform: scale(1.08) translateY(-2px);
+            box-shadow: 0 12px 36px rgba(10, 132, 255, 0.5);
+        }
+        #chatFab:active {
+            transform: scale(0.95);
+        }
+
         #chatInterface {
             position: fixed;
             bottom: 24px;
@@ -484,6 +513,8 @@
             display: flex;
             flex-direction: column;
             transform: translateY(120%);
+            opacity: 0;
+            pointer-events: none;
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
             z-index: 100;
             overflow: hidden;
@@ -491,6 +522,8 @@
 
         #chatInterface.active {
             transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
         }
 
         #chatHeader {
@@ -603,3 +636,38 @@
             .metrics-grid { grid-template-columns: 1fr; }
             .glass-panel { padding: 16px; }
         }
+
+        /* ==========================================================================
+           UX Loading Bar
+           ========================================================================== */
+        #topProgressBar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-indigo), var(--accent-green));
+            z-index: 10000;
+            transition: width 0.4s ease, opacity 0.4s ease;
+            box-shadow: 0 0 10px rgba(10, 132, 255, 0.6);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #topProgressBar.loading {
+            opacity: 1;
+            width: 90%;
+            animation: pulseLoading 2s infinite ease-in-out;
+        }
+
+        #topProgressBar.complete {
+            opacity: 0;
+            width: 100%;
+        }
+
+        @keyframes pulseLoading {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+

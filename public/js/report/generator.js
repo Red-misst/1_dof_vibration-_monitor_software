@@ -62,6 +62,10 @@ export function updateSessionsDropdown(sessions) {
 }
 
 async function loadReports() {
+  const container = document.getElementById('reportsContainer');
+  if (container) {
+    container.innerHTML = '<div style="color:var(--text-tertiary);font-size:11px;font-family:monospace;padding:12px;"><i class="fas fa-spinner fa-spin"></i> LOADING REPORTS...</div>';
+  }
   try {
     const res = await fetch('/api/reports');
     if (!res.ok) throw new Error('Failed to load reports');
@@ -69,6 +73,9 @@ async function loadReports() {
     updateReportsList(data.reports);
   } catch (err) {
     console.error('Error loading reports:', err);
+    if (container) {
+      container.innerHTML = '<div style="color:var(--accent-red);font-size:11px;font-family:monospace;padding:12px;">FAILED TO LOAD REPORTS</div>';
+    }
   }
 }
 
@@ -87,11 +94,17 @@ function updateReportsList(reports) {
     card.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #374151;';
 
     const createdDate = new Date(report.createdAt).toLocaleString();
+    const mode = report.metadata?.mode || (report.metadata?.offline ? 'Template' : 'AI');
+    const modeColor = mode === 'AI' ? 'var(--accent-blue)' : 'var(--text-tertiary)';
+    const badge = `<span style="font-size:9px;background:${modeColor};color:white;padding:2px 6px;border-radius:4px;font-weight:600;text-transform:uppercase;">${mode}</span>`;
 
     card.innerHTML = `
       <div>
-        <div class="font-medium text-gray-200" style="font-weight:500;">${report.name}</div>
-        <div class="text-xs text-gray-400" style="font-size:11px;color:#9ca3af;">Created: ${createdDate}</div>
+        <div class="font-medium text-gray-200" style="font-weight:500;display:flex;align-items:center;gap:6px;">
+          <span>${report.name}</span>
+          ${badge}
+        </div>
+        <div class="text-xs text-gray-400" style="font-size:11px;color:#9ca3af;margin-top:2px;">Created: ${createdDate}</div>
       </div>
       <div style="display:flex;gap:8px;">
         <a href="/api/reports/${report.id}/download" target="_blank"
@@ -113,6 +126,7 @@ function updateReportsList(reports) {
 async function generateReport() {
   const sessionId = reportSessionSelect.value;
   const authorName = document.getElementById('reportAuthorName').value.trim() || 'Vibration Analysis Team';
+  const useAi = document.getElementById('useAiReportCheckbox')?.checked || false;
 
   if (!sessionId) return;
 
@@ -120,12 +134,13 @@ async function generateReport() {
     reportStatus.innerHTML = '<span style="color:#60a5fa;"><i class="fas fa-circle-notch fa-spin"></i> Generating report...</span>';
   }
   if (generateReportBtn) generateReportBtn.disabled = true;
+  if (window.startLoading) window.startLoading();
 
   try {
     const res = await fetch('/api/reports/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, authorName })
+      body: JSON.stringify({ sessionId, authorName, useAi })
     });
 
     if (!res.ok) throw new Error('Failed to generate report');
@@ -144,11 +159,13 @@ async function generateReport() {
     }
   } finally {
     if (generateReportBtn) generateReportBtn.disabled = false;
+    if (window.stopLoading) window.stopLoading();
   }
 }
 
 async function deleteReport(reportId) {
   if (!confirm('Are you sure you want to delete this report?')) return;
+  if (window.startLoading) window.startLoading();
 
   try {
     const res = await fetch(`/api/reports/${reportId}`, { method: 'DELETE' });
@@ -156,5 +173,7 @@ async function deleteReport(reportId) {
     loadReports();
   } catch (err) {
     console.error('Error deleting report:', err);
+  } finally {
+    if (window.stopLoading) window.stopLoading();
   }
 }

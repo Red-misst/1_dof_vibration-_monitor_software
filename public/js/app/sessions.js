@@ -50,6 +50,7 @@ function buildSessionRow(session) {
 }
 
 export function onSessionDeleted(data) {
+  if (window.stopLoading) window.stopLoading();
   if (data.success) {
     showNotification('Session deleted', 'success');
     sendMessage({ type: 'get_sessions' });
@@ -71,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (btn.classList.contains('view-btn')) {
         showNotification('Loading session data...', 'info');
+        if (window.startLoading) window.startLoading();
         sendMessage({ type: 'get_session_data', sessionId: id });
         const sessionIdEl = document.getElementById('sessionId');
         if (sessionIdEl) sessionIdEl.textContent = id;
@@ -93,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (confirmBtn) {
     confirmBtn.addEventListener('click', () => {
       if (pendingDeleteId) {
+        if (window.startLoading) window.startLoading();
         sendMessage({ type: 'delete_session', sessionId: pendingDeleteId });
         closeDeleteModal();
       }

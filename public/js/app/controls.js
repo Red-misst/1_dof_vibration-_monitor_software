@@ -18,7 +18,6 @@ export function initControls() {
 
 function handleStartTest() {
   const name = document.getElementById('sessionName')?.value?.trim();
-  const mass = parseFloat(document.getElementById('testMass')?.value) || 1.0;
 
   if (!name) {
     const errEl = document.getElementById('sessionNameError');
@@ -30,7 +29,7 @@ function handleStartTest() {
   const errEl = document.getElementById('sessionNameError');
   if (errEl) errEl.classList.add('hidden');
 
-  sendMessage({ type: 'start_test', sessionName: name, testMass: mass });
+  sendMessage({ type: 'start_test', sessionName: name });
 }
 
 function handleStopTest() {
@@ -81,12 +80,12 @@ function refreshDeviceDisplay() {
 
   if (connectedDevices.size > 0) {
     indicator.className = 'status-indicator connected';
-    text.textContent = `${connectedDevices.size} device(s)`;
-    text.className = 'ml-2 font-semibold text-green-400';
+    text.textContent = `${connectedDevices.size} DEVICE(S)`;
+    text.className = 'ml-2 font-semibold status-text-connected';
   } else {
     indicator.className = 'status-indicator disconnected';
-    text.textContent = 'No devices';
-    text.className = 'ml-2 font-semibold text-red-400';
+    text.textContent = 'NO DEVICES';
+    text.className = 'ml-2 font-semibold status-text-disconnected';
   }
 }
 

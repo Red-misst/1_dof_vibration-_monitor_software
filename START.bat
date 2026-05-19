@@ -1,11 +1,19 @@
 @echo off
-title Z-Axis Vibration Monitor
+title Precision Structural Resonance and Vibration Analyzer
 color 0B
+cls
 echo.
-echo  ============================================
-echo   Z-Axis Vibration Monitor v2.0 
-echo   Moi University Mechanical Engineering Department
-echo  ============================================
+echo  ====================================================================
+echo       __  __       _   _    _       _          
+echo      ^|  \/  ^|     (_) ^| ^|  ^| ^|     (_)         
+echo      ^| \  / ^| ___  _  ^| ^|  ^| ^|_ __  ___   __  
+echo      ^| ^|\/^| ^|/ _ \^| ^| ^| ^|  ^| ^| '_ \^| \ \ / /  
+echo      ^| ^|  ^| ^| (_) ^| ^| ^| ^|__^| ^| ^| ^| ^| ^|\ V /   
+echo      ^|_^|  ^|_^|\___/^|_^|  \____/^|_^| ^|_^|_^| \_/    
+echo.
+echo   Precision Structural Resonance ^& Vibration Analyzer v2.0 
+echo   Moi University - Department of Mechanical ^& Production Engineering
+echo  ====================================================================
 echo.
 
 :: Check Node.js is available

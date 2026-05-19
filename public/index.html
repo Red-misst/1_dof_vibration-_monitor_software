@@ -39,16 +39,19 @@
 
         <!-- Header -->
         <div class="header-section">
-            <div class="top-badge">
-                <i class="fas fa-university"></i>
-                Moi University Mechanical Engineering Department
+            <img src="/images/logo.png" alt="Moi University Logo" style="height: 100px; width: auto; object-fit: contain; margin-bottom: 20px; background: #FFFFFF; padding: 12px 24px; border-radius: var(--radius-lg); box-shadow: 0 8px 32px rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+                <div class="top-badge" style="margin-bottom: 0;">
+                    Moi University Mechanical Engineering Department
+                </div>
+                <a href="/manual.html" class="top-badge" style="margin-bottom: 0; text-decoration: none; border-color: rgba(10, 132, 255, 0.4); color: var(--accent-blue);">
+                    <i class="fas fa-book-open" style="color: var(--accent-blue);"></i> Theory &amp; DSP Manual
+                </a>
             </div>
-            <br>
             <h1 class="header-title">
-                <i class="fas fa-wave-square"></i>
-                Z-Axis Vibration Monitor
+                Precision Structural Resonance &amp; Vibration Analyzer
             </h1>
-            <p class="header-subtitle">Real-time precision vibration analysis powered by ESP8266 &amp; MPU9250</p>
+            <p class="header-subtitle">Real-time modal parameter estimation, damping characterization, and FFT diagnostics</p>
         </div>
 
         <!-- Connection Status & Controls Container -->
@@ -79,10 +82,6 @@
                         <label for="sessionName">Session Name</label>
                         <input type="text" id="sessionName" placeholder="e.g., Bridge Load Test 01">
                         <div id="sessionNameError" style="display:none; font-size: 0.8rem; color: var(--accent-red); margin-top: 4px;"></div>
-                    </div>
-                    <div class="form-group" style="max-width: 150px;">
-                        <label for="testMass">Test Mass (kg)</label>
-                        <input type="number" id="testMass" value="1" min="0.01" step="0.01">
                     </div>
                     <div class="form-group" style="justify-content: flex-end; flex: none;">
                         <button id="startSessionBtn" class="btn btn-success">
@@ -221,7 +220,7 @@
         <div class="glass-panel">
             <div class="panel-header" style="justify-content: space-between;">
                 <span style="display:flex; align-items:center; gap:10px;">
-                    <i class="fas fa-chart-area" style="color: var(--accent-indigo);"></i> Natural Frequency Analysis (FFT)
+                    <i class="fas fa-chart-area" style="color: var(--accent-indigo);"></i> Magnitude vs. Frequency (Hz)
                 </span>
                 <button class="info-toggle"><i class="fas fa-info-circle"></i></button>
             </div>
@@ -269,7 +268,13 @@
                             </tr>
                         </thead>
                         <tbody id="sessionList">
-                            <!-- Populated by JS -->
+                            <tr>
+                                <td colspan="4" class="px-4 py-3 text-center text-gray-500">
+                                    <span style="display:inline-flex;align-items:center;gap:8px;font-family:monospace;font-size:11px;">
+                                        <i class="fas fa-circle-notch fa-spin"></i> LOADING SESSIONS...
+                                    </span>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -292,6 +297,10 @@
                         <label for="reportAuthorName">Report Author</label>
                         <input type="text" id="reportAuthorName" placeholder="Your name or organization">
                     </div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: -4px; margin-bottom: 4px;">
+                        <input type="checkbox" id="useAiReportCheckbox" checked style="width: auto; cursor: pointer;">
+                        <label for="useAiReportCheckbox" style="margin: 0; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;">Use AI Analysis Writer (Requires connected LLM)</label>
+                    </div>
                     <button id="generateReportBtn" class="btn btn-solid-primary" style="margin-top: 8px;">
                         <i class="fas fa-magic"></i> Generate PDF Report
                     </button>
@@ -312,15 +321,26 @@
 
         <!-- Footer Attribution -->
         <footer class="app-footer">
-            <div class="footer-author" style="font-size: 0.95rem; color: var(--text-secondary);">
-                Z-Axis Vibration Monitor Software &bull; Made by <span style="color: var(--accent-blue); font-weight: 600; letter-spacing: 0.02em;">Isaac Muigai</span>
+            <div class="footer-org" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 4px;">
+                Moi University Mechanical Engineering Department
+            </div>
+            <div class="footer-author" style="font-size: 0.9rem; color: var(--text-tertiary);">
+                Developed by <span style="color: var(--accent-blue); font-weight: 600;">Isaac Muigai</span>, 
+                <span style="color: var(--text-secondary); font-weight: 500;">Maureen Akinyi</span> &amp; 
+                <span style="color: var(--text-secondary); font-weight: 500;">Esther Barake</span>
             </div>
         </footer>
 
     </div><!-- /container -->
 
+    <!-- Floating Chat FAB -->
+    <div id="chatFab" style="position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo)); box-shadow: 0 8px 32px rgba(10, 132, 255, 0.4); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.4rem; cursor: pointer; z-index: 99; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+        <i class="fas fa-comments"></i>
+        <span class="status-indicator disconnected" id="fabStatusIndicator" style="position: absolute; top: 0; right: 0; border: 2px solid var(--bg-base); width: 12px; height: 12px; margin-right: 0;"></span>
+    </div>
+
     <!-- Floating Chat Interface (AI Assistant) -->
-    <div id="chatInterface">
+    <div id="chatInterface" style="opacity: 0; pointer-events: none; transform: translateY(120%);">
         <div id="chatHeader">
             <div style="display:flex; align-items:center; gap:10px;">
                 <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo)); display: flex; align-items: center; justify-content: center;">
@@ -328,14 +348,45 @@
                 </div>
                 <div>
                     <h3 style="font-size: 1rem; margin: 0; color: white;">AI Analysis Assistant</h3>
-                    <div style="font-size: 0.75rem; color: var(--accent-green); display: flex; align-items: center; gap: 4px;">
-                        <span class="status-indicator active" style="width: 6px; height: 6px;"></span> Online
+                    <div style="font-size: 0.75rem; display: flex; align-items: center; gap: 4px;">
+                        <span class="status-indicator disconnected" id="chatStatusIndicator" style="width: 6px; height: 6px; margin-right: 0;"></span>
+                        <span id="chatStatusText" style="color: var(--text-secondary);">Checking...</span>
                     </div>
                 </div>
             </div>
             <button id="toggleChat" style="background:none; border:none; color: var(--text-secondary); cursor:pointer; padding:8px; border-radius: 50%; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
-                <i class="fas fa-chevron-up" style="transition: transform 0.3s ease;"></i>
+                <i class="fas fa-times" style="font-size: 1rem;"></i>
             </button>
+        </div>
+        
+        <!-- API Key Setup (Shown if DeepSeek is not configured/connected) -->
+        <div id="chatSetup" style="display: none; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center; flex: 1; min-height: 350px;">
+            <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(10, 132, 255, 0.1); color: var(--accent-blue); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 16px; box-shadow: 0 0 20px rgba(10, 132, 255, 0.2);">
+                <i class="fas fa-key"></i>
+            </div>
+            <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; color: white;">AI Copilot Setup</h4>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 20px; line-height: 1.4; max-width: 280px;">
+                AI is offline or the API key is not configured. Select a provider and enter a valid key to enable real-time report analysis and chat features.
+            </p>
+            <div class="form-group" style="width: 100%; max-width: 280px; margin-bottom: 12px; text-align: left;">
+                <label for="providerSelect" style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 6px;">LLM Provider</label>
+                <select id="providerSelect" style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 10px 14px; border-radius: var(--radius-md); color: white; width: 100%; cursor: pointer;">
+                    <option value="deepseek" style="background: #18181b;">DeepSeek</option>
+                    <option value="openai" style="background: #18181b;">OpenAI</option>
+                </select>
+            </div>
+            <div class="form-group" style="width: 100%; max-width: 280px; margin-bottom: 12px; text-align: left;">
+                <label for="apiKeyInput" id="apiKeyLabel" style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 6px;">API Key</label>
+                <input type="password" id="apiKeyInput" placeholder="sk-..." style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 10px 14px; border-radius: var(--radius-md); color: white; width: 100%;">
+            </div>
+            <div class="form-group" style="width: 100%; max-width: 280px; margin-bottom: 16px; text-align: left;">
+                <label for="modelInput" style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 6px;">Model Name</label>
+                <input type="text" id="modelInput" placeholder="deepseek-chat" style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 10px 14px; border-radius: var(--radius-md); color: white; width: 100%;">
+            </div>
+            <button id="saveKeyBtn" class="btn btn-solid-primary" style="width: 100%; max-width: 280px; padding: 12px;">
+                <i class="fas fa-plug"></i> Connect LLM Service
+            </button>
+            <div id="keyStatusMessage" style="font-size: 0.85rem; margin-top: 12px; min-height: 20px; color: var(--accent-red); font-weight: 500;"></div>
         </div>
         
         <div id="chatBody">
@@ -361,7 +412,7 @@
     <script src="/js/ui.js"></script>
 
     <!-- ES Module entry point — loads all app modules -->
-    <script type="module" src="/js/main.js"></script>
+    <script type="module" src="/js/main.js?v=2.0.3"></script>
 
 </body>
 </html>

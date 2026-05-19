@@ -3,7 +3,7 @@
  * WebSocket connection management and message dispatcher.
  */
 
-import { updateVibrationCharts, loadHistoricalCharts, clearAllCharts } from './charts.js';
+import { updateVibrationCharts, loadHistoricalCharts, clearAllCharts, updateFrequencySpectrum } from './charts.js';
 import { updateSessionsList, onSessionDeleted } from './sessions.js';
 import { onTestStarted, onTestStopped, updateDeviceStatus } from './controls.js';
 
@@ -27,16 +27,19 @@ export function connectWebSocket() {
       setConnectionStatus('connected');
       sendMessage({ type: 'get_device_list' });
       sendMessage({ type: 'get_sessions' });
+      if (window.stopLoading) window.stopLoading();
     });
 
     socket.addEventListener('close', (e) => {
       setConnectionStatus('disconnected');
       console.warn('[WS] Disconnected:', e.code);
       scheduleReconnect();
+      if (window.stopLoading) window.stopLoading();
     });
 
     socket.addEventListener('error', () => {
       setConnectionStatus('error');
+      if (window.stopLoading) window.stopLoading();
     });
 
     socket.addEventListener('message', (e) => {
@@ -104,7 +107,15 @@ function handleMessage(data) {
     case 'session_data':
       loadHistoricalCharts(data.data || [], data.frequencyData || {});
       document.getElementById('dataPointCount').textContent = (data.data || []).length;
+      if (data.frequencyData) {
+        document.getElementById('frequencyValue').textContent = (data.frequencyData.naturalFrequency || 0).toFixed(2);
+        document.getElementById('qFactorValue').textContent = (data.frequencyData.qFactor || 0).toFixed(1);
+        document.getElementById('amplitudeValue').textContent = (data.frequencyData.peakAmplitude || 0).toFixed(3);
+        const lastZ = data.data && data.data.length > 0 ? data.data[data.data.length - 1].deltaZ : 0;
+        document.getElementById('currentZValue').textContent = (lastZ || 0).toFixed(3);
+      }
       showNotification('Session data loaded', 'success');
+      if (window.stopLoading) window.stopLoading();
       break;
 
     case 'session_deleted':
@@ -115,6 +126,9 @@ function handleMessage(data) {
       if (data.frequency) document.getElementById('frequencyValue').textContent = data.frequency.toFixed(2);
       if (data.qFactor) document.getElementById('qFactorValue').textContent = data.qFactor.toFixed(1);
       if (data.amplitude) document.getElementById('amplitudeValue').textContent = data.amplitude.toFixed(3);
+      if (data.frequencies && data.magnitudes) {
+        updateFrequencySpectrum(data.frequencies, data.magnitudes);
+      }
       break;
 
     case 'error':
@@ -136,9 +150,9 @@ function setConnectionStatus(status) {
   const text = document.getElementById('connectionStatus');
   if (!indicator || !text) return;
   const map = {
-    connected: ['connected', 'Connected', 'text-green-400'],
-    disconnected: ['disconnected', 'Disconnected', 'text-red-400'],
-    error: ['disconnected', 'Connection Error', 'text-red-400']
+    connected: ['connected', 'CONNECTED', 'status-text-connected'],
+    disconnected: ['disconnected', 'DISCONNECTED', 'status-text-disconnected'],
+    error: ['disconnected', 'CONNECTION ERROR', 'status-text-disconnected']
   };
   const [cls, label, color] = map[status] || map.disconnected;
   indicator.className = `status-indicator ${cls}`;

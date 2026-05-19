@@ -30,8 +30,35 @@ window.showNotification = function(message, type = 'info') {
   setTimeout(() => toast.remove(), 3500);
 };
 
+// Global loading bar helper (used across modules for asynchronous actions)
+window.startLoading = function() {
+  let bar = document.getElementById('topProgressBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'topProgressBar';
+    document.body.appendChild(bar);
+  }
+  bar.className = 'loading';
+  bar.style.width = '30%';
+  setTimeout(() => { if (bar.className === 'loading') bar.style.width = '60%'; }, 200);
+  setTimeout(() => { if (bar.className === 'loading') bar.style.width = '85%'; }, 400);
+};
+
+window.stopLoading = function() {
+  const bar = document.getElementById('topProgressBar');
+  if (!bar) return;
+  bar.className = 'complete';
+  bar.style.width = '100%';
+  setTimeout(() => {
+    if (bar.className === 'complete') {
+      bar.style.opacity = '0';
+      bar.style.width = '0%';
+    }
+  }, 400);
+};
 
 document.addEventListener('DOMContentLoaded', () => {
+  window.startLoading();
   console.log('[App] Initializing Z-Axis Vibration Monitor v2.0 (Offline)');
   initCharts();
   initControls();

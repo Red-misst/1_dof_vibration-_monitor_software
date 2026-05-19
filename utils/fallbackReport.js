@@ -10,6 +10,7 @@ export function generateFallbackAnalysis(reportContext) {
   const amp = peakAmplitude;
   const qFactor = mechanicalProperties?.qFactor;
   const bandwidth = mechanicalProperties?.bandwidth;
+  const dampingRatio = mechanicalProperties?.dampingRatio || (qFactor ? 1 / (2 * qFactor) : null);
 
   let summary = '';
   let interpretation = '';
@@ -87,12 +88,16 @@ ${amplitudeNote ? `${amplitudeNote}\n` : ''}${dampingNote ? `${dampingNote}\n` :
 
 ${interpretation}
 
-### Measured Parameters
-- **Natural Frequency:** ${freq ? freq.toFixed(3) + ' Hz' : 'Not detected'}
-- **Peak Amplitude:** ${amp ? amp.toFixed(4) + ' g' : 'N/A'}
-- **Q Factor:** ${qFactor ? qFactor.toFixed(2) : 'Not calculated'}
-- **Bandwidth:** ${bandwidth ? bandwidth.toFixed(3) + ' Hz' : 'N/A'}
-- **RMS Value:** ${rmsValue?.toFixed(4) || 'N/A'} g
+### Measured Parameters & Diagnostic Thresholds
+- **Natural Frequency (fn):** ${freq ? freq.toFixed(3) + ' Hz' : 'Not detected'} (Primary resonance indicator)
+- **Peak Amplitude:** ${amp ? amp.toFixed(4) + ' g' : 'N/A'} (Dynamic displacement stress equivalent)
+- **Q Factor (Quality Coefficient):** ${qFactor ? qFactor.toFixed(2) : 'Not calculated'} (Resonant amplification factor)
+- **Damping Ratio (ζ):** ${dampingRatio ? dampingRatio.toFixed(4) : 'N/A'} (Rate of decaying transients)
+- **Half-Power Bandwidth:** ${bandwidth ? bandwidth.toFixed(3) + ' Hz' : 'N/A'} (-3dB sweep energy drop-off)
+- **RMS Acceleration (Arms):** ${rmsValue?.toFixed(4) || 'N/A'} g (Continuous energy equivalence)
+
+### Structural Dynamics Interpretation
+Vibration amplitude and mechanical damping determine structural fatigue rates. The measured Q-Factor of **${qFactor ? qFactor.toFixed(2) : 'N/A'}** and damping ratio of **${dampingRatio ? dampingRatio.toFixed(4) : 'N/A'}** highlight the system's susceptibility to cyclic loading. If excitation forces align with the natural frequency of **${freq ? freq.toFixed(2) + ' Hz' : 'N/A'}**, amplitude amplification will occur, potentially causing mounting bracket cracking or fastener degradation.
 
 ---
 
@@ -106,9 +111,9 @@ ${causes}
 
 ${recommendations}
 
-> [!NOTE]
-> **AI Analysis Unavailable** — This report was generated using rule-based analysis without AI assistance.
-> For a detailed AI-generated interpretation, ensure internet connectivity and regenerate the report.
+---
+
+**Notice:** This report was generated using standard rule-based mechanical analysis without active AI assistance. For dynamic qualitative writing, enable the AI Analysis option in the app setup dashboard.
 
 ---
 

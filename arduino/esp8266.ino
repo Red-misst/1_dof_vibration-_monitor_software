@@ -3,41 +3,41 @@
 #include <ESP8266WiFi.h>
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
-#include <arduinoFFT.h>
 
 // ==== Configuration ====
 // WiFi Configuration
 const char* ssid = "Galaxy";
 const char* password = "Barake2023";
 
-// WebSocket Server Configuration
-const char* host = "vibrations.onrender.com";
-const int port = 443;  // HTTPS port
+// WebSocket Server Configuration (Offline Mode)
+// Primary: vibration-monitor.local (mDNS)
+// Fallback: 192.168.137.1 (Windows Mobile Hotspot default IP)
+const char* host = "vibration-monitor.local";
+const int port = 3000;
 const char* url = "/esp8266";  // WebSocket path
-// FFT Config
-#define SAMPLES 64
-#define SAMPLING_FREQUENCY 250  // Increased from 200Hz
+// DSP Config
+#define SAMPLES 128
+#define SAMPLING_FREQUENCY 500  // 500Hz sampling
+#define SAMPLING_INTERVAL_US 2000 // 1,000,000 / 500
 #define INITIAL_THRESHOLD 0.01
-#define BUFFER_SIZE 128  // Circular buffer size
+#define BUFFER_SIZE 64  // Circular buffer size
 
 // New globals for optimization
 double circularBuffer[BUFFER_SIZE];
 int bufferIndex = 0;
 double movingAverage = 0;
 double dynamicThreshold = INITIAL_THRESHOLD;
-const double ALPHA = 0.1;  // EMA factor
+const double ALPHA = 0.15;  // EMA factor
 
 MPU9250_asukiaaa mySensor;
 WebSocketsClient webSocket;
 
-double vReal[SAMPLES];
-double vImag[SAMPLES];
-ArduinoFFT<double> FFT(vReal, vImag, SAMPLES, SAMPLING_FREQUENCY);
-
 String deviceId = "ESP8266_" + String(ESP.getChipId(), HEX);
 bool initialized = false;
-double baseline = 0;
+double baselineGravity = 0;
 double prevZ = 0;
+
+double batchBuffer[SAMPLES];
 
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
   switch (type) {
@@ -63,6 +63,20 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
   }
 }
 
+void calibrateSensor() {
+  Serial.println("Calibrating Z-axis baseline...");
+  double sum = 0;
+  for (int i = 0; i < 1000; i++) {
+    mySensor.accelUpdate();
+    sum += mySensor.accelZ();
+    delay(2);
+  }
+  baselineGravity = sum / 1000.0;
+  movingAverage = baselineGravity;
+  for (int i = 0; i < BUFFER_SIZE; i++) circularBuffer[i] = baselineGravity;
+  Serial.printf("Calibration complete. 1G baseline: %.4f\n", baselineGravity);
+}
+
 void setup() {
   Serial.begin(115200);
   Wire.begin(4, 5); // SDA, SCL
@@ -82,11 +96,14 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
   Serial.println("\n✅ WiFi Connected");
 
+  calibrateSensor();
+  initialized = true;
+
   webSocket.begin(host, port, url);  // Plain ws://
   webSocket.onEvent(webSocketEvent);
   webSocket.setReconnectInterval(5000);
 
-  Serial.println("🔧 Ready: Sampling at 200Hz");
+  Serial.println("🔧 Ready: Sampling at 500Hz");
 }
 
 void loop() {
@@ -95,16 +112,11 @@ void loop() {
     mySensor.accelUpdate();
     double z = mySensor.accelZ();
 
-    if (!initialized) {
-        baseline = z;
-        prevZ = z;
-        movingAverage = z;
-        initialized = true;
-        return;
-    }
+    if (!initialized) return;
 
-    // Update moving average with more responsive alpha
-    const double ALPHA = 0.15;  // Increased from 0.1 for faster response
+    double normalizedZ = z - baselineGravity;
+
+    // Update moving average with responsive alpha
     movingAverage = (ALPHA * z) + ((1.0 - ALPHA) * movingAverage);
     
     // Store in circular buffer
@@ -117,55 +129,50 @@ void loop() {
         variance += sq(circularBuffer[i] - movingAverage);
     }
     variance /= BUFFER_SIZE;
-    dynamicThreshold = max(INITIAL_THRESHOLD, sqrt(variance) * 1.2); // Reduced multiplier for more sensitivity
+    dynamicThreshold = max(INITIAL_THRESHOLD, sqrt(variance) * 1.5); 
 
     double deltaZ = abs(z - movingAverage);
 
     // Send data more frequently when motion is detected
     if (deltaZ > dynamicThreshold) {
-        Serial.println("⚠ Motion Detected");
+        Serial.println("⚠ Motion Detected - Collecting batch");
 
-        // Faster sampling for FFT
+        // Faster strict sampling for Server-Side FFT
         for (int i = 0; i < SAMPLES; i++) {
+            unsigned long startMicros = micros();
             mySensor.accelUpdate();
-            vReal[i] = mySensor.accelZ() - movingAverage;
-            vImag[i] = 0;
-            delayMicroseconds(3000);  // ~333 Hz sampling
-        }
-
-        FFT.windowing(FFTWindow::Hamming, FFTDirection::Forward);
-        FFT.compute(FFTDirection::Forward);
-        FFT.complexToMagnitude();
-
-        double peakFreq = 0;
-        double peakAmp = 0;
-        for (int i = 1; i < SAMPLES/2; i++) {
-            if (vReal[i] > peakAmp) {
-                peakAmp = vReal[i];
-                peakFreq = ((double)i * SAMPLING_FREQUENCY) / SAMPLES;
+            batchBuffer[i] = mySensor.accelZ() - baselineGravity;
+            
+            // Wait strictly for the exact interval (2000us = 500Hz)
+            while (micros() - startMicros < SAMPLING_INTERVAL_US) {
+                yield();
             }
         }
 
-        StaticJsonDocument<300> doc;
-        doc["type"] = "fft_result";
+        // Send batched data
+        StaticJsonDocument<2048> doc;
+        doc["type"] = "raw_batch";
         doc["deviceId"] = deviceId;
-        doc["frequency"] = peakFreq;
-        doc["amplitude"] = peakAmp;
-        doc["raw_acceleration"] = z;
-        doc["deltaZ"] = deltaZ;
         doc["timestamp"] = millis();
+        doc["sampleRate"] = SAMPLING_FREQUENCY;
+        doc["samples"] = SAMPLES;
+        
+        JsonArray dataArray = doc.createNestedArray("data");
+        for (int i = 0; i < SAMPLES; i++) {
+            dataArray.add(batchBuffer[i]);
+        }
 
         String jsonPayload;
         serializeJson(doc, jsonPayload);
         webSocket.sendTXT(jsonPayload);
 
-        delay(100);  // Reduced delay for more frequent updates
+        delay(100);  // Debounce after heavy sampling
     } else {
-        // Send basic data periodically even without motion
+        // Send heartbeat data periodically even without motion
         StaticJsonDocument<200> doc;
-        doc["type"] = "fft_result";
+        doc["type"] = "heartbeat";
         doc["deviceId"] = deviceId;
-        doc["raw_acceleration"] = z;
+        doc["raw_acceleration"] = normalizedZ;
         doc["deltaZ"] = deltaZ;
         doc["timestamp"] = millis();
 
@@ -177,4 +184,5 @@ void loop() {
     }
 
     prevZ = z;
+
 }

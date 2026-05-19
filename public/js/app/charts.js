@@ -31,28 +31,64 @@ const BASE_OPTIONS = {
   scales: { x: { ...BASE_SCALE }, y: { ...BASE_SCALE, beginAtZero: true, ticks: { ...BASE_SCALE.ticks, maxTicksLimit: 8 } } }
 };
 
+const TIME_SERIES_OPTIONS = {
+  ...BASE_OPTIONS,
+  elements: {
+    line: {
+      tension: 0.45,
+      cubicInterpolationMode: 'monotone'
+    },
+    point: { radius: 0 }
+  }
+};
+
 export function initCharts() {
   rawZChart = new Chart(document.getElementById('rawZChart').getContext('2d'), {
     type: 'line',
-    data: { labels: [], datasets: [{ label: 'Raw Z (g)', data: [], borderColor: CHART_COLORS.blue, backgroundColor: CHART_COLORS.blueAlpha, borderWidth: 2 }] },
+    data: { 
+      labels: [], 
+      datasets: [{ 
+        label: 'Raw Z (g)', 
+        data: [], 
+        borderColor: CHART_COLORS.blue, 
+        backgroundColor: CHART_COLORS.blueAlpha, 
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHitRadius: 0,
+        showLine: true
+      }] 
+    },
     options: { ...BASE_OPTIONS }
   });
 
   deltaZChart = new Chart(document.getElementById('deltaZChart').getContext('2d'), {
     type: 'line',
-    data: { labels: [], datasets: [{ label: 'Delta Z (g)', data: [], borderColor: CHART_COLORS.purple, backgroundColor: CHART_COLORS.purpleAlpha, borderWidth: 2 }] },
+    data: { 
+      labels: [], 
+      datasets: [{ 
+        label: 'Delta Z (g)', 
+        data: [], 
+        borderColor: CHART_COLORS.purple, 
+        backgroundColor: CHART_COLORS.purpleAlpha, 
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHitRadius: 0,
+        showLine: true
+      }] 
+    },
     options: { ...BASE_OPTIONS }
   });
 
   frequencyChart = new Chart(document.getElementById('frequencyChart').getContext('2d'), {
     type: 'line',
-    data: { labels: [], datasets: [{ label: 'Frequency Amplitude', data: [], borderColor: CHART_COLORS.green, backgroundColor: CHART_COLORS.greenAlpha, borderWidth: 2, pointRadius: 1 }] },
+    data: { labels: [], datasets: [{ label: 'Magnitude', data: [], borderColor: CHART_COLORS.green, backgroundColor: CHART_COLORS.greenAlpha, borderWidth: 2, pointRadius: 1 }] },
     options: {
       ...BASE_OPTIONS,
+      elements: { line: { tension: 0.15 }, point: { radius: 1 } },
       plugins: { legend: { display: false }, tooltip: { callbacks: { title: items => items[0].label + ' Hz' } } },
       scales: {
         x: { ...BASE_SCALE, title: { display: true, text: 'Frequency (Hz)', color: CHART_COLORS.tick } },
-        y: { ...BASE_SCALE, beginAtZero: true, title: { display: true, text: 'Amplitude', color: CHART_COLORS.tick } }
+        y: { ...BASE_SCALE, beginAtZero: true, title: { display: true, text: 'Magnitude', color: CHART_COLORS.tick } }
       }
     }
   });
@@ -62,7 +98,7 @@ export function initCharts() {
     frequencyTimeChart = new Chart(freqTimeCtx, {
       type: 'line',
       data: { labels: [], datasets: [{ label: 'Frequency (Hz)', data: [], borderColor: CHART_COLORS.blue, backgroundColor: CHART_COLORS.blueAlpha, borderWidth: 2, pointRadius: 1 }] },
-      options: { ...BASE_OPTIONS, scales: { x: { ...BASE_SCALE, title: { display: true, text: 'Time', color: CHART_COLORS.tick } }, y: { ...BASE_SCALE, beginAtZero: true, title: { display: true, text: 'Hz', color: CHART_COLORS.tick } } } }
+      options: { ...TIME_SERIES_OPTIONS, scales: { x: { ...BASE_SCALE, title: { display: true, text: 'Time', color: CHART_COLORS.tick } }, y: { ...BASE_SCALE, beginAtZero: true, title: { display: true, text: 'Hz', color: CHART_COLORS.tick } } } }
     });
   }
 
@@ -71,11 +107,11 @@ export function initCharts() {
     amplitudeTimeChart = new Chart(ampTimeCtx, {
       type: 'line',
       data: { labels: [], datasets: [{ label: 'Amplitude', data: [], borderColor: CHART_COLORS.purple, backgroundColor: CHART_COLORS.purpleAlpha, borderWidth: 2, pointRadius: 1 }] },
-      options: { ...BASE_OPTIONS, scales: { x: { ...BASE_SCALE, title: { display: true, text: 'Time', color: CHART_COLORS.tick } }, y: { ...BASE_SCALE, beginAtZero: true, title: { display: true, text: 'Amplitude', color: CHART_COLORS.tick } } } }
+      options: { ...TIME_SERIES_OPTIONS, scales: { x: { ...BASE_SCALE, title: { display: true, text: 'Time', color: CHART_COLORS.tick } }, y: { ...BASE_SCALE, beginAtZero: true, title: { display: true, text: 'Amplitude', color: CHART_COLORS.tick } } } }
     });
   }
 
-  console.log('[Charts] Initialized successfully');
+  console.log('[Charts] Initialized successfully with Monotone Cubic Spline curves');
 }
 
 export function pushChartData(chart, label, value, maxPoints = 50) {
@@ -93,22 +129,21 @@ export function updateVibrationCharts(data) {
   pushChartData(rawZChart, ts, data.rawAcceleration || 0);
   pushChartData(deltaZChart, ts, data.deltaZ || 0);
 
-  if (data.frequency && data.amplitude) {
-    const idx = frequencyChart.data.labels.indexOf(data.frequency);
-    if (idx === -1) {
-      frequencyChart.data.labels.push(data.frequency);
-      frequencyChart.data.datasets[0].data.push(data.amplitude);
-    } else if (data.amplitude > frequencyChart.data.datasets[0].data[idx]) {
-      frequencyChart.data.datasets[0].data[idx] = data.amplitude;
-    }
-    frequencyChart.update('none');
-  }
-
-  if (frequencyTimeChart) pushChartData(frequencyTimeChart, ts, data.frequency || 0);
-  if (amplitudeTimeChart) pushChartData(amplitudeTimeChart, ts, data.amplitude || 0);
+  if (frequencyTimeChart && data.frequency) pushChartData(frequencyTimeChart, ts, data.frequency);
+  if (amplitudeTimeChart && data.amplitude) pushChartData(amplitudeTimeChart, ts, data.amplitude);
 }
 
+export function updateFrequencySpectrum(frequencies, magnitudes) {
+  if (!frequencyChart || !frequencies || !magnitudes) return;
+  frequencyChart.data.labels = frequencies.map(f => parseFloat(f).toFixed(1));
+  frequencyChart.data.datasets[0].data = magnitudes;
+  frequencyChart.update('none');
+}
+
+
 export function loadHistoricalCharts(vibData, frequencyData) {
+  clearAllCharts();
+
   const timestamps = vibData.map(p => new Date(p.timestamp || p.receivedAt).toLocaleTimeString());
 
   rawZChart.data.labels = timestamps;
@@ -120,8 +155,8 @@ export function loadHistoricalCharts(vibData, frequencyData) {
   deltaZChart.update();
 
   if (frequencyData?.frequencies?.length) {
-    frequencyChart.data.labels = frequencyData.frequencies;
-    frequencyChart.data.datasets[0].data = frequencyData.amplitudes;
+    frequencyChart.data.labels = frequencyData.frequencies.map(f => parseFloat(f).toFixed(1));
+    frequencyChart.data.datasets[0].data = frequencyData.magnitudes || frequencyData.amplitudes;
     frequencyChart.update();
   }
 

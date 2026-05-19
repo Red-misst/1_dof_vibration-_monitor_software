@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moi University - Structural Vibration Theory & User Manual</title>
+    
+    <!-- FontAwesome & Custom CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/manual.css">
+
+    <!-- KaTeX for Beautiful LaTeX Math Equations -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- Brand Header Section -->
+        <header class="brand-header">
+            <div class="logo-wrapper">
+                <img src="/images/logo.png" alt="Moi University Logo" class="logo-img">
+                <div class="brand-text">
+                    <h1>Theory, Mathematics &amp; User Manual</h1>
+                    <p>Moi University Department of Mechanical &amp; Production Engineering</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <a href="/api/export/manual/pdf" class="btn-back" style="background: rgba(48, 209, 88, 0.1); border-color: rgba(48, 209, 88, 0.3); color: var(--accent-green);">
+                    <i class="fas fa-file-pdf"></i> Download PDF
+                </a>
+                <a href="/" class="btn-back">
+                    <i class="fas fa-arrow-left"></i> Back to Live Monitor
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Layout Grid -->
+        <div class="layout-grid">
+            
+            <!-- Sidebar Sticky Navigation Links -->
+            <nav class="sidebar-nav">
+                <h3>Manual Sections</h3>
+                <ul class="nav-links">
+                    <li><a href="#pipeline" class="active"><i class="fas fa-network-wired"></i> Data Pipeline</a></li>
+                    <li><a href="#time-domain"><i class="fas fa-hourglass-half"></i> Time-Domain Filtering</a></li>
+                    <li><a href="#frequency-domain"><i class="fas fa-wave-square"></i> Frequency Analysis</a></li>
+                    <li><a href="#resonance-damping"><i class="fas fa-chart-line"></i> Resonance &amp; Damping</a></li>
+                    <li><a href="#calculator"><i class="fas fa-calculator"></i> Interactive Calculator</a></li>
+                </ul>
+            </nav>
+
+            <!-- Manual Documentation Content -->
+            <main class="manual-content">
+
+                <!-- 1. System Pipeline and Data Flow -->
+                <section id="pipeline" class="doc-section">
+                    <h2><i class="fas fa-network-wired"></i> System Pipeline &amp; Data Flow</h2>
+                    <p>
+                        This offline application is built around a real-time hardware-in-the-loop data pipeline. 
+                        It processes physical vertical vibration events using low-cost telemetry (ESP8266 + MPU9250) 
+                        and analyzes structural mechanical properties on the host machine.
+                    </p>
+
+                    <div class="flowchart-container">
+                        <div class="flow-node">
+                            <div class="node-title">MPU9250 Accelerometer</div>
+                            <div class="node-desc">Measures physical proper vertical acceleration in the Z-Axis</div>
+                        </div>
+                        <div class="flow-arrow">↓ <span>Samples at 500Hz</span></div>
+                        
+                        <div class="flow-node">
+                            <div class="node-title">ESP8266 Microcontroller</div>
+                            <div class="node-desc">Filters high frequency noise, checks trigger delta variance, packets raw binary batch</div>
+                        </div>
+                        <div class="flow-arrow">↓ <span>WebSockets Transmission</span></div>
+                        
+                        <div class="flow-node highlight">
+                            <div class="node-title">Node.js Server</div>
+                            <div class="node-desc">Applies Hamming Window, runs Cooley-Tukey Radix-2 FFT, extracts Q-Factor &amp; Damping Ratio</div>
+                        </div>
+                        <div class="flow-arrow">↓ <span>JSON Feeds &amp; SQLite write</span></div>
+                        
+                        <div class="flow-node">
+                            <div class="node-title">Web Dashboard &amp; PDF Report</div>
+                            <div class="node-desc">Displays oscilloscope/spectrum, saves structured sessions, runs AI copilot diagnostic reports</div>
+                        </div>
+                    </div>
+
+                    <p>
+                        The data transmission uses a lightweight WebSockets connection. Under standby mode, the ESP8266 transmits vibration metadata updates at 1Hz. When vertical displacement triggers a vibration event, the microcontroller locks into high-speed sampling (exactly 2000µs intervals) and transmits a complete 128-point array to the host for spectral parsing.
+                    </p>
+                </section>
+
+                <!-- 2. Time-Domain Filtering -->
+                <section id="time-domain" class="doc-section">
+                    <h2><i class="fas fa-hourglass-half"></i> Time-Domain Filtering</h2>
+                    
+                    <h3>1.1 Gravity Calibration</h3>
+                    <p>
+                        At rest, the MPU9250 accelerometer reads gravitational acceleration of approximately \(1g\) (\(9.81\text{ m/s}^2\)). 
+                        To isolate dynamic structural vibration, a baseline calibration is run on system startup, taking the arithmetic mean of 1000 rest samples:
+                    </p>
+                    \[ \text{Baseline} = \frac{1}{N} \sum_{i=1}^{N} Z_i \]
+
+                    <h3>1.2 Exponential Moving Average (EMA)</h3>
+                    <p>
+                        To adjust for slow sensor tilt, thermal drift, or low-frequency orientation shifts, the system continuously updates a dynamic baseline using an Exponential Moving Average (EMA) filter:
+                    </p>
+                    \[ MA_t = \alpha \cdot Z_t + (1 - \alpha) \cdot MA_{t-1} \]
+                    <p>
+                        Where the smoothing coefficient \(\alpha = 0.15\) is balanced to follow sensor tilt without absorbing high-frequency mechanical vibration pulses.
+                    </p>
+
+                    <h3>1.3 Variance-Based Jerk Detection</h3>
+                    <p>
+                        To run efficiently on small laptop batteries, the host computer does not calculate full FFT grids on background noise. Instead, the ESP8266 calculates standard deviation (\(\sigma\)) across a rolling window of \(N=64\) samples:
+                    </p>
+                    \[ \sigma^2 = \frac{1}{N} \sum_{i=1}^{N} (Z_i - MA_t)^2 \]
+                    <p>
+                        The active trigger threshold is set to \(1.5 \times \sigma\). When the absolute jerk value \(\Delta Z = |Z_t - MA_t|\) exceeds this threshold, the ESP8266 triggers high-speed capture.
+                    </p>
+                </section>
+
+                <!-- 3. Frequency Domain Analysis -->
+                <section id="frequency-domain" class="doc-section">
+                    <h2><i class="fas fa-wave-square"></i> Frequency-Domain Analysis</h2>
+                    <p>
+                        Analyzing vibration strictly in the time domain hides critical machine failure indicators. The system converts raw vertical displacement waveforms into frequency spectra to isolate individual rotor speeds, bearing defects, and structural resonances.
+                    </p>
+
+                    <h3>2.1 Spectral Leakage &amp; The Hamming Window</h3>
+                    <p>
+                        Because the captured buffer is a finite, abrupt window of length \(N=128\), simple Fourier transformation introduces artificial high-frequency "spectral leakage" at the buffer boundaries. To eliminate this, the system pre-multiplies the raw dataset by a Hamming Window prior to processing:
+                    </p>
+                    \[ W(n) = 0.54 - 0.46 \cos\left( \frac{2\pi n}{N-1} \right) \]
+                    \[ Z_{\text{windowed}}[n] = Z[n] \times W(n) \]
+
+                    <h3>2.2 Cooley-Tukey Radix-2 FFT</h3>
+                    <p>
+                        The Node.js server utilizes the Cooley-Tukey Radix-2 Decimation-in-Time Fast Fourier Transform (FFT) algorithm. By recursively splitting the Discrete Fourier Transform (DFT) equation into odd and even halves, execution complexity is reduced from \(O(N^2)\) to \(O(N \log N)\):
+                    </p>
+                    \[ X_k = \sum_{n=0}^{N-1} x_n \cdot e^{-\frac{j 2\pi k n}{N}} \]
+
+                    <h3>2.3 Magnitude Scaling to Physical G-Forces</h3>
+                    <p>
+                        The complex output of the Radix-2 FFT (\(X_k\)) represents relative magnitude. To retrieve the **true physical amplitude in g-force** for displaying on the oscilloscope and charts, the magnitude of each frequency bin \(k\) is scaled:
+                    </p>
+                    \[ \text{Magnitude}_k = \sqrt{\text{Re}(X_k)^2 + \text{Im}(X_k)^2} \]
+                    \[ \text{Amplitude}_k = \frac{2}{N} \cdot \text{Magnitude}_k \]
+                    <p>
+                        This scaling correctly accounts for the energy distributed across positive and negative conjugate frequency pairs.
+                    </p>
+
+                    <h3>2.4 Nyquist Frequency &amp; Bin Resolution</h3>
+                    <p>
+                        Based on the Nyquist sampling criterion, with a hardware timing rate of \(f_s = 500\text{Hz}\), the maximum frequency resolved is the Nyquist limit of \(250\text{Hz}\). 
+                        The frequency resolution width (\(\Delta f\)) of each FFT bin is exactly:
+                    </p>
+                    \[ \Delta f = \frac{f_s}{N} = \frac{500}{128} \approx 3.906\text{ Hz} \]
+                </section>
+
+                <!-- 4. Structural Resonance and Damping -->
+                <section id="resonance-damping" class="doc-section">
+                    <h2><i class="fas fa-chart-line"></i> Resonance &amp; Damping</h2>
+                    <p>
+                        Resonance occurs when dynamic mechanical excitation frequencies match the structural natural frequency (\(f_n\)), resulting in severe vibration amplification and fatigue failure.
+                    </p>
+
+                    <h3>3.1 Half-Power Bandwidth Q-Factor Method</h3>
+                    <p>
+                        The system evaluates the sharpness of the resonance curve to calculate the dimensionless Quality Factor (Q-Factor), indicating dynamic energy storage:
+                    </p>
+                    <ol style="margin-left: 20px; color: var(--text-secondary); margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px;">
+                        <li>Identify the peak resonant amplitude \(A_{\text{max}}\) at the natural frequency \(f_n\).</li>
+                        <li>Compute the -3dB half-power threshold:
+                            \[ A_{\text{half}} = \frac{A_{\text{max}}}{\sqrt{2}} \approx 0.707 \cdot A_{\text{max}} \]
+                        </li>
+                        <li>Linearly interpolate the frequency values to the left (\(f_1\)) and right (\(f_2\)) of the peak where amplitude cross \(A_{\text{half}}\).</li>
+                        <li>Calculate the Q-Factor:
+                            \[ Q = \frac{f_n}{f_2 - f_1} \]
+                        </li>
+                    </ol>
+
+                    <h3>3.2 Damping Ratio</h3>
+                    <p>
+                        The structural damping ratio (\(\zeta\)) represents the rate at which dynamic oscillations decay over time. For engineering structures (where \(\zeta < 0.1\)), this is calculated directly from the Q-Factor:
+                    </p>
+                    \[ \zeta \approx \frac{1}{2Q} \]
+                    
+                    <div class="params-table-wrapper">
+                        <table class="params-table">
+                            <thead>
+                                <tr>
+                                    <th>Damping Ratio (\(\zeta\))</th>
+                                    <th>Q-Factor</th>
+                                    <th>Classification</th>
+                                    <th>Structural Interpretation &amp; Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>\(\zeta < 0.01\)</td>
+                                    <td>\(Q > 50\)</td>
+                                    <td>Critically Light</td>
+                                    <td>Severe resonant risk. Immediate structural damping sheets or stiffening gussets required.</td>
+                                </tr>
+                                <tr>
+                                    <td>\(0.01 \le \zeta < 0.05\)</td>
+                                    <td>\(10 \le Q \le 50\)</td>
+                                    <td>Low Damping</td>
+                                    <td>Common in welded steel structures. Avoid matching structural natural frequencies.</td>
+                                </tr>
+                                <tr>
+                                    <td>\(0.05 \le \zeta < 0.15\)</td>
+                                    <td>\(3.3 \le Q < 10\)</td>
+                                    <td>Moderate Damping</td>
+                                    <td>Typical of composite materials, bolted frames, or elastomeric isolators. Stable.</td>
+                                </tr>
+                                <tr>
+                                    <td>\(\zeta \ge 0.15\)</td>
+                                    <td>\(Q < 3.3\)</td>
+                                    <td>High Damping</td>
+                                    <td>Heavily cushioned foundation pads. Vibrations decay almost instantly. Safe.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 5. Interactive DSP Calculator -->
+                <section id="calculator" class="doc-section">
+                    <h2><i class="fas fa-calculator"></i> Interactive DSP Playground</h2>
+                    <p>
+                        Enter physical vibration metrics below to simulate how the DSP system dynamically computes the Q-factor, damping ratios, and trigger boundaries.
+                    </p>
+
+                    <div class="calc-widget">
+                        <div class="calc-grid">
+                            
+                            <!-- Inputs -->
+                            <div class="calc-inputs">
+                                <div class="calc-group">
+                                    <label for="inputFn">Natural Frequency (\(f_n\) - Hz)</label>
+                                    <input type="number" id="inputFn" value="45.0" step="0.5" min="1" max="250">
+                                </div>
+                                <div class="calc-group">
+                                    <label for="inputAmax">Peak Amplitude (\(A_{\text{max}}\) - G)</label>
+                                    <input type="number" id="inputAmax" value="1.20" step="0.05" min="0.01" max="16">
+                                </div>
+                                <div class="calc-group">
+                                    <label for="inputF1">Lower Cutoff (\(f_1\) - Hz)</label>
+                                    <input type="number" id="inputF1" value="43.2" step="0.1" min="1" max="250">
+                                </div>
+                                <div class="calc-group">
+                                    <label for="inputF2">Upper Cutoff (\(f_2\) - Hz)</label>
+                                    <input type="number" id="inputF2" value="46.8" step="0.1" min="1" max="250">
+                                </div>
+                            </div>
+
+                            <!-- Real-time Outputs -->
+                            <div class="calc-outputs">
+                                <div class="calc-row">
+                                    <div class="calc-lbl">Half-Power Threshold (\(A_{\text{half}}\))</div>
+                                    <div class="calc-val text-gray" id="outAhalf">0.849 G</div>
+                                </div>
+                                <div class="calc-row">
+                                    <div class="calc-lbl">Half-Power Bandwidth (\(\Delta f\))</div>
+                                    <div class="calc-val orange" id="outBandwidth">3.60 Hz</div>
+                                </div>
+                                <div class="calc-row">
+                                    <div class="calc-lbl">Quality Factor (Q)</div>
+                                    <div class="calc-val indigo" id="outQ">12.50</div>
+                                </div>
+                                <div class="calc-row">
+                                    <div class="calc-lbl">Damping Ratio (\(\zeta\))</div>
+                                    <div class="calc-val" id="outZeta">0.0400</div>
+                                </div>
+                                <div class="calc-row">
+                                    <div class="calc-lbl">Structural Status</div>
+                                    <div class="calc-val" id="outStatus" style="font-size: 0.95rem;">Low Damping</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <footer class="manual-footer">
+                    Moi University Mechanical Engineering Department &copy; 2026. All academic rights reserved.
+                </footer>
+
+            </main>
+
+        </div><!-- /layout-grid -->
+
+    </div><!-- /container -->
+
+    <script src="/js/manual.js"></script>
+
+</body>
+</html>

@@ -82,13 +82,13 @@ db.exec(`
 
 // ─── Sessions ──────────────────────────────────────────────────────────────
 
-export function createSession({ name, testMass = 1.0 }) {
+export function createSession({ name }) {
   const id = uuidv4();
   const now = Date.now();
   db.prepare(`
-    INSERT INTO sessions (id, name, test_mass, start_time, is_active, created_at)
-    VALUES (?, ?, ?, ?, 1, ?)
-  `).run(id, name, testMass, now, now);
+    INSERT INTO sessions (id, name, start_time, is_active, created_at)
+    VALUES (?, ?, ?, 1, ?)
+  `).run(id, name, now, now);
   return getSessionById(id);
 }
 
@@ -241,7 +241,6 @@ function deserializeSession(row) {
     id: row.id,
     _id: row.id, // compatibility alias
     name: row.name,
-    testMass: row.test_mass,
     startTime: row.start_time,
     endTime: row.end_time || null,
     isActive: row.is_active === 1,
