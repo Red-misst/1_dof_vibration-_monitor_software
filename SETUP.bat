@@ -5,6 +5,7 @@ echo.
 echo  ============================================
 echo   Z-Axis Vibration Monitor v2.0
 echo   First-Time Setup
+echo   Moi University Mechanical Engineering Department
 echo  ============================================
 echo.
 echo  Checking for Node.js...
@@ -44,6 +45,7 @@ if errorlevel 1 (
 echo.
 echo  ============================================
 echo   Setup Complete! Run START.bat to launch.
+echo   Moi University Mechanical Engineering Department
 echo  ============================================
 echo.
 pause

@@ -3,7 +3,8 @@ title Z-Axis Vibration Monitor
 color 0B
 echo.
 echo  ============================================
-echo   Z-Axis Vibration Monitor v2.0 (Offline)
+echo   Z-Axis Vibration Monitor v2.0 
+echo   Moi University Mechanical Engineering Department
 echo  ============================================
 echo.
 
