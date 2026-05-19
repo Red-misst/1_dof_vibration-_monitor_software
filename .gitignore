@@ -126,6 +126,13 @@ Thumbs.db
 *.sqlite
 *.db
 
+# Local database and reports
+/data/vibrations.db
+/data/vibrations.db-wal
+/data/vibrations.db-shm
+/data/reports/*
+!/data/reports/.gitkeep
+
 # Certificates
 *.pem
 *.key

@@ -3,332 +3,269 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Z-Axis Vibration Monitor - Real-time Analysis</title>    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <meta name="description" content="Z-Axis Vibration Monitor — Real-time offline vibration analysis with ESP8266 and MPU9250">
+    <title>Z-Axis Vibration Monitor</title>
+
+    <!-- Vendored offline assets — no internet required -->
+    <script src="/vendor/chart.min.js"></script>
+    <script src="/vendor/marked.min.js"></script>
+    <link href="/vendor/font-awesome/css/all.min.css" rel="stylesheet">
+    <link href="/vendor/inter/inter.css" rel="stylesheet">
     <link href="/css/styles.css" rel="stylesheet">
-    <link href="/css/chat-enhancements.css" rel="stylesheet">
+
+    <style>
+      /* Inline critical base styles so the page renders even if vendor CSS has issues */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: linear-gradient(135deg, #111827 0%, #1f2937 100%); min-height: 100vh; color: #f3f4f6; font-family: 'Inter', system-ui, sans-serif; }
+      .container { max-width: 1280px; margin: 0 auto; padding: 24px 16px; }
+      .modal { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; }
+      .modal-content { background: #1f2937; border: 1px solid #374151; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-gray-900 to-gray-800 min-h-screen text-gray-100">
+<body>
+
     <!-- Delete Confirmation Modal -->
     <div id="deleteModal" class="modal">
         <div class="modal-content">
-            <span class="close-modal" onclick="closeDeleteModal()">&times;</span>
-            <h2 class="text-xl font-bold mb-4">Confirm Session Deletion</h2>
-            <p class="mb-6">Are you sure you want to delete this session? This action cannot be undone.</p>
+            <span class="close-modal" onclick="closeDeleteModal()" style="float:right;cursor:pointer;font-size:20px;">&times;</span>
+            <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:16px;">Confirm Session Deletion</h2>
+            <p style="margin-bottom:24px;color:#9ca3af;">This action cannot be undone.</p>
             <input type="hidden" id="deleteSessionId" value="">
-            <div class="flex justify-end space-x-4">
-                <button class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded" onclick="closeDeleteModal()">Cancel</button>
-                <button class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded" onclick="confirmDeleteSession()">Delete</button>
+            <div style="display:flex;justify-content:flex-end;gap:12px;">
+                <button style="background:#4b5563;padding:8px 16px;border-radius:6px;border:none;color:white;cursor:pointer;" onclick="closeDeleteModal()">Cancel</button>
+                <button style="background:#dc2626;padding:8px 16px;border-radius:6px;border:none;color:white;cursor:pointer;" onclick="confirmDeleteSession()">Delete</button>
             </div>
         </div>
     </div>
 
-    <div class="container mx-auto px-4 py-6">
+    <div class="container">
+
         <!-- Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-100 mb-2">
-                <i class="fas fa-wave-square text-blue-400 mr-3"></i>
+        <div style="text-align:center;margin-bottom:32px;">
+            <h1 style="font-size:2rem;font-weight:700;color:#f9fafb;margin-bottom:8px;">
+                <i class="fas fa-wave-square" style="color:#60a5fa;margin-right:12px;"></i>
                 Z-Axis Vibration Monitor
             </h1>
-            <p class="text-gray-300">Real-time vertical vibration analysis with frequency and damping calculations</p>
+            <p style="color:#9ca3af;">Real-time offline vibration analysis — powered by ESP8266 &amp; MPU9250</p>
         </div>
 
-        <!-- NEW: Session Creation Panel (Moved to top) -->
-        <div class="bg-gradient-to-r from-blue-900 to-blue-800 border border-blue-700 rounded-lg shadow-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-200 mb-4 flex items-center">
-                <i class="fas fa-plus-circle text-blue-400 mr-2"></i>
+        <!-- Session Creation -->
+        <div style="background:linear-gradient(135deg,#1e3a5f,#1e40af22);border:1px solid #1d4ed8;border-radius:12px;padding:24px;margin-bottom:24px;">
+            <h3 style="font-size:1rem;font-weight:600;color:#e5e7eb;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-plus-circle" style="color:#60a5fa;"></i>
                 Start New Monitoring Session
             </h3>
-            <div class="flex flex-wrap gap-4">
-                <div class="flex-1">
-                    <label for="sessionName" class="block text-sm font-medium text-gray-400 mb-1">Session Name</label>
-                    <input type="text" id="sessionName" 
-                        class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100"
-                        placeholder="Enter test session name">
-                    <div id="sessionNameError" class="text-xs text-red-400 mt-1 hidden"></div>
+            <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
+                <div style="flex:1;min-width:200px;">
+                    <label for="sessionName" style="display:block;font-size:0.8rem;font-weight:500;color:#9ca3af;margin-bottom:4px;">Session Name</label>
+                    <input type="text" id="sessionName" placeholder="Enter test session name"
+                        style="width:100%;background:#374151;border:1px solid #4b5563;border-radius:6px;padding:8px 12px;color:#f3f4f6;">
+                    <div id="sessionNameError" class="hidden" style="font-size:0.75rem;color:#f87171;margin-top:4px;"></div>
                 </div>
-                <div class="flex-1">
-                    <label for="testMass" class="block text-sm font-medium text-gray-400 mb-1">Test Mass (kg)</label>
-                    <input type="number" id="testMass" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100"
-                        placeholder="Mass in kg" value="1" min="0.01" step="0.01">
+                <div style="flex:1;min-width:160px;">
+                    <label for="testMass" style="display:block;font-size:0.8rem;font-weight:500;color:#9ca3af;margin-bottom:4px;">Test Mass (kg)</label>
+                    <input type="number" id="testMass" value="1" min="0.01" step="0.01"
+                        style="width:100%;background:#374151;border:1px solid #4b5563;border-radius:6px;padding:8px 12px;color:#f3f4f6;">
                 </div>
-                <div class="flex items-end">
-                    <button id="startSessionBtn" 
-                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center transition-all duration-200">
-                        <i class="fas fa-play mr-2"></i>
-                        Start New Session
-                    </button>
-                </div>
+                <button id="startSessionBtn"
+                    style="background:#16a34a;color:white;padding:10px 24px;border-radius:8px;border:none;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;">
+                    <i class="fas fa-play"></i> Start New Session
+                </button>
             </div>
         </div>
 
         <!-- Connection Status Bar -->
-        <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-4 mb-6">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-6">
-                    <div class="flex items-center">
+        <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:16px;margin-bottom:24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <div style="display:flex;align-items:center;gap:24px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
                         <span class="status-indicator" id="connectionIndicator"></span>
-                        <span class="font-medium text-gray-300">Server:</span>
-                        <span id="connectionStatus" class="ml-2 font-semibold">Connecting...</span>
+                        <span style="font-weight:500;color:#d1d5db;">Server:</span>
+                        <span id="connectionStatus" class="ml-2 font-semibold" style="margin-left:4px;">Connecting...</span>
                     </div>
-                    <div class="flex items-center">
+                    <div style="display:flex;align-items:center;gap:8px;">
                         <span class="status-indicator" id="deviceIndicator"></span>
-                        <span class="font-medium text-gray-300">Device:</span>
-                        <span id="deviceStatus" class="ml-2 font-semibold">No devices</span>
+                        <span style="font-weight:500;color:#d1d5db;">Device:</span>
+                        <span id="deviceStatus" style="margin-left:4px;font-weight:600;color:#ef4444;">No devices</span>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-400">Session:</span>
-                    <span id="sessionId" class="text-sm font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded">None</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:0.8rem;color:#6b7280;">Session:</span>
+                    <span id="sessionId" style="font-size:0.8rem;font-family:monospace;background:#374151;color:#d1d5db;padding:2px 8px;border-radius:4px;">None</span>
                 </div>
             </div>
         </div>
 
         <!-- Control Panel -->
-        <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 mb-6">
-            <div class="flex items-center justify-between">
-                <div class="flex space-x-4">
-                    <button id="startTest" 
-                            class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center">
-                        <i class="fas fa-play mr-2"></i>
-                        Start Test
+        <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;margin-bottom:24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <div style="display:flex;gap:12px;">
+                    <button id="startTest" style="background:#16a34a;color:white;padding:10px 24px;border-radius:8px;border:none;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-play"></i> Start Test
                     </button>
-                    <button id="stopTest" 
-                            class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center opacity-50" 
-                            disabled>
-                        <i class="fas fa-stop mr-2"></i>
-                        Stop Test
+                    <button id="stopTest" disabled style="background:#dc2626;color:white;padding:10px 24px;border-radius:8px;border:none;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;opacity:0.5;">
+                        <i class="fas fa-stop"></i> Stop Test
                     </button>
-                    <button id="exportData" 
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center">
-                        <i class="fas fa-download mr-2"></i>
-                        Export Data
+                    <button id="exportData" style="background:#2563eb;color:white;padding:10px 24px;border-radius:8px;border:none;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-download"></i> Export CSV
                     </button>
                 </div>
-                <div class="text-sm text-gray-400">
-                    <span id="dataPointCount">0</span> Z-axis data points collected
+                <div style="font-size:0.85rem;color:#9ca3af;">
+                    <span id="dataPointCount">0</span> data points
                 </div>
             </div>
         </div>
 
         <!-- Real-time Metrics -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <div class="metric-card bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 text-center">
-                <div class="text-3xl font-bold text-blue-400 mb-2" id="frequencyValue">0.00</div>
-                <div class="text-gray-300 font-medium">Natural Frequency (Hz)</div>
-                <div class="text-xs text-gray-500 mt-1">Primary resonance frequency</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;margin-bottom:24px;">
+            <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;text-align:center;">
+                <div id="frequencyValue" style="font-size:2rem;font-weight:700;color:#60a5fa;margin-bottom:8px;">0.00</div>
+                <div style="color:#d1d5db;font-weight:500;">Natural Frequency (Hz)</div>
+                <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Primary resonance</div>
             </div>
-            <div class="metric-card bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 text-center">
-                <div class="text-3xl font-bold text-green-400 mb-2" id="qFactorValue">0.0</div>
-                <div class="text-gray-300 font-medium">Q Factor</div>
-                <div class="text-xs text-gray-500 mt-1">Quality factor</div>
+            <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;text-align:center;">
+                <div id="qFactorValue" style="font-size:2rem;font-weight:700;color:#4ade80;margin-bottom:8px;">0.0</div>
+                <div style="color:#d1d5db;font-weight:500;">Q Factor</div>
+                <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Quality factor</div>
             </div>
-            <div class="metric-card bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 text-center">
-                <div class="text-3xl font-bold text-purple-400 mb-2" id="amplitudeValue">0.000</div>
-                <div class="text-gray-300 font-medium">Amplitude (g)</div>
-                <div class="text-xs text-gray-500 mt-1">Peak Z-axis acceleration</div>
+            <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;text-align:center;">
+                <div id="amplitudeValue" style="font-size:2rem;font-weight:700;color:#a78bfa;margin-bottom:8px;">0.000</div>
+                <div style="color:#d1d5db;font-weight:500;">Amplitude (g)</div>
+                <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Peak Z-axis acceleration</div>
             </div>
-            <div class="metric-card bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 text-center">
-                <div class="text-3xl font-bold text-orange-400 mb-2" id="currentZValue">0.000</div>
-                <div class="text-gray-300 font-medium">Z-Axis Value (g)</div>
-                <div class="text-xs text-gray-500 mt-1">Live vertical vibration</div>
-            </div>
-        </div>
-
-        <!-- Charts -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <!-- Z-Axis Raw Data Chart -->
-            <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-200 mb-4 flex items-center">
-                    <i class="fas fa-chart-line text-blue-400 mr-2"></i>
-                    Z-Axis Raw Acceleration
-                </h3>
-                <div class="relative">
-                    <canvas id="rawZChart" class="w-full h-64"></canvas>
-                </div>
-                <div class="mt-4 text-center text-sm text-gray-400">
-                    Raw vertical acceleration (g)
-                </div>
-            </div>
-
-            <!-- Z-Axis Delta Chart -->
-            <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-200 mb-4 flex items-center">
-                    <i class="fas fa-tachometer-alt text-purple-400 mr-2"></i>
-                    Z-Axis Vibration Delta
-                </h3>
-                <div class="relative">
-                    <canvas id="deltaZChart" class="w-full h-64"></canvas>
-                </div>
-                <div class="mt-4 text-center text-sm text-gray-400">
-                    Vertical vibration intensity changes
-                </div>
+            <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;text-align:center;">
+                <div id="currentZValue" style="font-size:2rem;font-weight:700;color:#fb923c;margin-bottom:8px;">0.000</div>
+                <div style="color:#d1d5db;font-weight:500;">Z-Axis Value (g)</div>
+                <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Live vertical vibration</div>
             </div>
         </div>
 
-        <!-- Session Management Panel (moved down) -->
-        <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-200 mb-4 flex items-center">
-                <i class="fas fa-folder-open text-blue-400 mr-2"></i>
-                Session History
+        <!-- Charts Row 1 -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:24px;margin-bottom:24px;">
+            <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;">
+                <h3 style="font-size:1rem;font-weight:600;color:#e5e7eb;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-chart-line" style="color:#60a5fa;"></i> Z-Axis Raw Acceleration
+                </h3>
+                <div style="position:relative;height:256px;"><canvas id="rawZChart"></canvas></div>
+            </div>
+            <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;">
+                <h3 style="font-size:1rem;font-weight:600;color:#e5e7eb;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-tachometer-alt" style="color:#a78bfa;"></i> Z-Axis Vibration Delta
+                </h3>
+                <div style="position:relative;height:256px;"><canvas id="deltaZChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Session History -->
+        <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;margin-bottom:24px;">
+            <h3 style="font-size:1rem;font-weight:600;color:#e5e7eb;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-folder-open" style="color:#60a5fa;"></i> Session History
             </h3>
-            
-            <!-- Session List -->
-            <div>
-                <div class="bg-gray-700 rounded overflow-hidden">
-                    <table class="min-w-full divide-y divide-gray-600">
-                        <thead class="bg-gray-800">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Name</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Start Time</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sessionList" class="divide-y divide-gray-600">
-                            <!-- Sessions will be populated here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>        <!-- Natural Frequency Graph -->
-        <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-200 mb-4 flex items-center">
-                <i class="fas fa-wave-square text-green-400 mr-2"></i>
-                Natural Frequency Analysis
-            </h3>
-            <div class="frequency-graph" style="height: 300px;">
-                <canvas id="frequencyChart" class="w-full h-full"></canvas>
-            </div>
-        </div>
-        
-        <!-- NEW: Time-based Frequency and Amplitude Analysis -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <!-- Frequency vs Time Chart -->
-            <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-200 mb-4 flex items-center">
-                    <i class="fas fa-chart-line text-blue-400 mr-2"></i>
-                    Frequency vs Time
-                </h3>
-                <div class="relative">
-                    <canvas id="frequencyTimeChart" class="w-full h-64"></canvas>
-                </div>                <div class="mt-4 text-center text-sm text-gray-400">
-                  frequency changes over time
-                </div>
-            </div>
-
-            <!-- Amplitude vs Time Chart -->
-            <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-200 mb-4 flex items-center">
-                    <i class="fas fa-tachometer-alt text-purple-400 mr-2"></i>
-                    Amplitude vs Time
-                </h3>
-                <div class="relative">
-                    <canvas id="amplitudeTimeChart" class="w-full h-64"></canvas>
-                </div>
-                <div class="mt-4 text-center text-sm text-gray-400">
-                    Z-axis amplitude changes over time
-                </div>
-            </div>
-        </div>
-        
-        <!-- Natural Frequency Calculations - Improved UI with Table -->
-        <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-200 mb-4 flex items-center">
-                <i class="fas fa-cogs text-yellow-400 mr-2"></i>
-                Frequency Analysis Results
-            </h3>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-700">
-                    <thead>
-                        <tr class="bg-gray-700">
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Parameter</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Value</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Unit</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Description</th>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead style="background:#111827;">
+                        <tr>
+                            <th style="padding:12px 16px;text-align:left;font-size:0.75rem;color:#9ca3af;text-transform:uppercase;">Name</th>
+                            <th style="padding:12px 16px;text-align:left;font-size:0.75rem;color:#9ca3af;text-transform:uppercase;">Start Time</th>
+                            <th style="padding:12px 16px;text-align:left;font-size:0.75rem;color:#9ca3af;text-transform:uppercase;">Status</th>
+                            <th style="padding:12px 16px;text-align:left;font-size:0.75rem;color:#9ca3af;text-transform:uppercase;">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-700" id="frequencyResultsTable">
-                        <!-- Will be populated dynamically -->
-                    </tbody>
+                    <tbody id="sessionList" style="border-top:1px solid #374151;"></tbody>
                 </table>
             </div>
-            <div class="engineering-data hidden" id="engineeringData">
-                <!-- Keep this as a backup -->
+        </div>
+
+        <!-- Natural Frequency Chart -->
+        <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;margin-bottom:24px;">
+            <h3 style="font-size:1rem;font-weight:600;color:#e5e7eb;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-wave-square" style="color:#4ade80;"></i> Natural Frequency Analysis
+            </h3>
+            <div style="height:300px;"><canvas id="frequencyChart"></canvas></div>
+        </div>
+
+        <!-- Time Series Charts Row -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:24px;margin-bottom:24px;">
+            <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;">
+                <h3 style="font-size:1rem;font-weight:600;color:#e5e7eb;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-chart-line" style="color:#60a5fa;"></i> Frequency vs Time
+                </h3>
+                <div style="position:relative;height:256px;"><canvas id="frequencyTimeChart"></canvas></div>
+            </div>
+            <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;">
+                <h3 style="font-size:1rem;font-weight:600;color:#e5e7eb;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-tachometer-alt" style="color:#a78bfa;"></i> Amplitude vs Time
+                </h3>
+                <div style="position:relative;height:256px;"><canvas id="amplitudeTimeChart"></canvas></div>
             </div>
         </div>
-        
-        <!-- Report Generator Section -->
-        <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-200 mb-4 flex items-center">
-                <i class="fas fa-file-pdf text-red-400 mr-2"></i>
-                Generate Analysis Report
+
+        <!-- Report Generator -->
+        <div style="background:#1f2937;border:1px solid #374151;border-radius:12px;padding:24px;margin-bottom:24px;">
+            <h3 style="font-size:1rem;font-weight:600;color:#e5e7eb;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-file-pdf" style="color:#f87171;"></i> Generate Analysis Report
             </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:16px;">
                 <div>
-                    <label for="reportSessionSelect" class="block text-sm font-medium text-gray-400 mb-2">Select Session</label>
-                    <select id="reportSessionSelect" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100">
+                    <label for="reportSessionSelect" style="display:block;font-size:0.85rem;color:#9ca3af;margin-bottom:8px;">Select Session</label>
+                    <select id="reportSessionSelect" style="width:100%;background:#374151;border:1px solid #4b5563;border-radius:6px;padding:8px 12px;color:#f3f4f6;">
                         <option value="">-- Select a session --</option>
                     </select>
                 </div>
                 <div>
-                    <label for="reportAuthorName" class="block text-sm font-medium text-gray-400 mb-2">Report Author</label>
-                    <input type="text" id="reportAuthorName" placeholder="Your name or organization" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100">
+                    <label for="reportAuthorName" style="display:block;font-size:0.85rem;color:#9ca3af;margin-bottom:8px;">Report Author</label>
+                    <input type="text" id="reportAuthorName" placeholder="Your name or organization"
+                        style="width:100%;background:#374151;border:1px solid #4b5563;border-radius:6px;padding:8px 12px;color:#f3f4f6;">
                 </div>
             </div>
-            <div class="flex justify-end">
-                <button id="generateReportBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-medium disabled:opacity-50 flex items-center">
-                    <i class="fas fa-file-pdf mr-2"></i>
-                    Generate PDF Report
+            <div style="display:flex;justify-content:flex-end;">
+                <button id="generateReportBtn" style="background:#dc2626;color:white;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-weight:500;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-file-pdf"></i> Generate PDF Report
                 </button>
             </div>
-            <div id="reportStatus" class="mt-4 text-sm"></div>
-            <div id="reportsList" class="mt-6">
-                <h4 class="text-md font-medium text-gray-300 mb-2">Available Reports</h4>
-                <div id="reportsContainer" class="bg-gray-700 rounded p-2">
-                    <!-- Reports will be listed here -->
-                    <div class="text-gray-400 text-sm p-2">No reports available</div>
+            <div id="reportStatus" style="margin-top:16px;font-size:0.875rem;"></div>
+            <div id="reportsList" style="margin-top:24px;">
+                <h4 style="font-size:0.9rem;font-weight:500;color:#d1d5db;margin-bottom:8px;">Available Reports</h4>
+                <div id="reportsContainer" style="background:#111827;border-radius:8px;padding:8px;">
+                    <div style="color:#6b7280;font-size:0.875rem;padding:8px;">No reports available</div>
                 </div>
             </div>
         </div>
-    </div>
+
+    </div><!-- /container -->
 
     <!-- Floating Chat Interface -->
-    <div id="chatInterface" class="fixed bottom-4 right-4 w-96 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl flex flex-col transition-all duration-300" style="height: 500px; transform: translateY(450px);" aria-label="Chat assistant">
-        <div id="chatHeader" class="p-4 bg-gray-700 rounded-t-lg flex justify-between items-center cursor-pointer">
-            <div class="flex items-center">
-                <i class="fas fa-robot text-blue-400 mr-2"></i>
-                <h3 class="font-semibold text-gray-200">Vibration Analysis Assistant</h3>
+    <div id="chatInterface" class="fixed bottom-4 right-4 w-96 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl flex flex-col transition-all duration-300"
+         style="position:fixed;bottom:16px;right:16px;width:384px;background:#1f2937;border:1px solid #374151;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column;height:500px;transform:translateY(450px);">
+        <div id="chatHeader" style="padding:16px;background:#111827;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-robot" style="color:#60a5fa;"></i>
+                <h3 style="font-weight:600;color:#e5e7eb;font-size:0.95rem;">Vibration Analysis Assistant</h3>
             </div>
             <div>
-                <button title="Toggle Chat" id="toggleChat" class="text-gray-400 hover:text-gray-200 p-1 rounded-full hover:bg-gray-600 transition-colors" aria-label="Toggle chat visibility">
+                <button title="Toggle Chat" id="toggleChat" style="background:none;border:none;color:#9ca3af;cursor:pointer;padding:4px;">
                     <i class="fas fa-chevron-up"></i>
                 </button>
             </div>
         </div>
-        <div id="chatBody" class="flex-1 overflow-y-auto p-4" style="height: 380px;">
-            <div id="chatMessages" class="flex flex-col space-y-4">
-                <!-- Session selector will be inserted here by JavaScript -->
-                <!-- Messages will be loaded after session selection -->
-            </div>
+        <div id="chatBody" style="flex:1;overflow-y:auto;padding:16px;height:380px;">
+            <div id="chatMessages" style="display:flex;flex-direction:column;gap:16px;"></div>
         </div>
-        <div id="chatInput" class="p-3 border-t border-gray-700">
-            <div class="flex">
-                <input type="text" id="userMessage" placeholder="Ask about your vibration data..." class="flex-1 bg-gray-700 border border-gray-600 rounded-l px-3 py-2 text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                <button title="Send Message" id="sendMessage" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r">
+        <div id="chatInput" style="padding:12px;border-top:1px solid #374151;">
+            <div style="display:flex;">
+                <input type="text" id="userMessage" placeholder="Ask about your vibration data..."
+                    style="flex:1;background:#374151;border:1px solid #4b5563;border-radius:6px 0 0 6px;padding:8px 12px;color:#f3f4f6;outline:none;">
+                <button title="Send Message" id="sendMessage"
+                    style="background:#2563eb;color:white;padding:8px 16px;border:none;border-radius:0 6px 6px 0;cursor:pointer;">
                     <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
-            <div class="text-xs text-gray-500 mt-1">Select a session to start chatting</div>
+            <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Select a session to start chatting</div>
         </div>
     </div>
 
-    <!-- Include external JavaScript -->
-    <script src="/js/vibration-app.js"></script>
-    <script src="/js/vibration-chat.js"></script>
-    <script src="/js/vibration-report.js"></script>
+    <!-- ES Module entry point — loads all app modules -->
+    <script type="module" src="/js/main.js"></script>
+
 </body>
 </html>

@@ -1,15 +1,12 @@
 {
-  "name": "vibbration",
-  "version": "1.0.0",
-  "description": "Z-Axis Vibration Monitoring System with Real-time Analysis",
-  "main": "index.js",
+  "name": "vibration-monitor",
+  "version": "2.0.0",
+  "description": "Z-Axis Vibration Monitoring System — Offline Desktop Application",
+  "main": "server/index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "prebuild": "mkdir -p ./public && cp -r ./src/public/* ./public/ || true",
-    "build": "npm run prebuild",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js"
   },
   "keywords": [
     "vibration",
@@ -17,24 +14,26 @@
     "esp8266",
     "websocket",
     "z-axis",
-    "real-time"
+    "offline"
   ],
   "author": "Isaac",
   "license": "MIT",
   "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "bonjour-service": "^1.2.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "mongoose": "^7.5.0",
     "node-fetch": "^3.3.2",
     "pdfkit": "^0.14.0",
+    "uuid": "^9.0.0",
     "ws": "^8.14.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
   },
   "engines": {
-    "node": ">=14.0.0",
-    "npm": ">=6.0.0"
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
   }
 }
