@@ -24,7 +24,7 @@ export async function generatePDFManual() {
       doc.on('end', () => resolve(Buffer.concat(buffers)));
 
       // ==========================================
-      // PAGE 1: HEADER, PIPELINE & TIME DOMAIN
+      // PAGE 1: HEADER, PIPELINE & DATA FLOW
       // ==========================================
       drawHeader(doc, 'ACADEMIC MANUAL', 'FM: MU-MPE-SV-M01');
 
@@ -45,9 +45,40 @@ export async function generatePDFManual() {
       drawPipelineStep(doc, 3, 'Dashboard & Report Exports', 'Renders real-time charts, manages session history, and compiles analytical PDF reports.');
       doc.moveDown(0.6);
 
-      drawHeading(doc, '2. Time-Domain Filtering & Calibration', 1);
+      // ==========================================
+      // PAGE 2: HARDWARE ASSEMBLY & PINOUT
+      // ==========================================
+      doc.addPage();
+      doc.y = 64;
+
+      drawHeading(doc, '2. Hardware Assembly & Pinout', 1);
+      doc.font('Helvetica').fontSize(9).fillColor('#334155')
+        .text('This section details the physical electrical interface between the ESP8266 telemetry node (microcontroller) and the MPU9250 inertial measurement unit (IMU). The system utilizes an Inter-Integrated Circuit (I2C) serial bus protocol operating at 3.3V logic levels. Ensure that the microcontroller is completely disconnected from any USB host or external power source before performing wiring modifications.', { align: 'justify', lineGap: 2.5 });
+      doc.moveDown(0.8);
+
+      drawHardwareTable(doc);
+      doc.moveDown(0.8);
+
+      drawWarningBox(doc, 'CRITICAL HARDWARE PRECAUTION: 3.3V DC LIMITATION', 'Do not connect the MPU9250 sensor VCC pin to the 5V, VIN, or VU rails of the ESP8266. The sensor breakout board operates under a strict 3.3V limit. Applying 5V potential will cause immediate, irreversible thermal damage to the internal CMOS microcircuitry.');
+      doc.moveDown(0.8);
+
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#0f172a').text('Sequential Wiring Reconnection Procedure');
+      doc.moveDown(0.5);
+
+      drawWiringStep(doc, 1, 'Reference Potential (Ground Loop & Addressing)', 'Establish the electrical ground reference loop by routing a jumper wire from the Ground pin (labeled G or GND) of the ESP8266 to the GND pin of the MPU9250. To lock the sensor address, run a secondary jumper wire from another Ground pin (G) of the ESP8266 to the AD0 (or SDO) address-select pin of the sensor. This establishes a logic LOW on AD0, binding the device to the default address of 0x68 required by the firmware.');
+      drawWiringStep(doc, 2, 'Main Power Rail Routing (3.3V VCC)', 'Establish the power supply by connecting a jumper wire from the regulated 3.3V output pin (labeled 3V3 or 3V) of the ESP8266 to the VCC pin of the MPU9250. Double-check that this is not connected to a 5V source.');
+      drawWiringStep(doc, 3, 'Serial Clock bus Line (SCL Connection)', 'Connect the Serial Clock line by routing a wire from the digital pin D1 (GPIO5) of the ESP8266 to the SCL pin of the MPU9250. This line coordinates clock pulses for synchronous bus communication.');
+      drawWiringStep(doc, 4, 'Serial Data bus Line (SDA Connection)', 'Connect the Serial Data line by routing a wire from the digital pin D2 (GPIO4) of the ESP8266 to the SDA pin of the MPU9250. This facilitates bidirectional serial communication for sensor readings.');
+
+      // ==========================================
+      // PAGE 3: TIME-DOMAIN FILTERING & CALIBRATION
+      // ==========================================
+      doc.addPage();
+      doc.y = 64;
+
+      drawHeading(doc, '3. Time-Domain Filtering & Calibration', 1);
       
-      drawHeading(doc, '2.1 Gravity Calibration', 2);
+      drawHeading(doc, '3.1 Gravity Calibration', 2);
       doc.font('Helvetica').fontSize(9).fillColor('#334155')
         .text('At rest, the sensor reports gravitational acceleration of approximately 1g (9.81 m/s²). To isolate dynamic structure vibration, the baseline gravity component is calculated as the arithmetic mean of the first N = 1000 resting samples:', { align: 'justify', lineGap: 2.5 });
       doc.moveDown(0.4);
@@ -61,7 +92,7 @@ export async function generatePDFManual() {
       ];
       drawMathBlock(doc, parts1, 'Computes the constant gravity bias offset.');
 
-      drawHeading(doc, '2.2 Exponential Moving Average (EMA)', 2);
+      drawHeading(doc, '3.2 Exponential Moving Average (EMA)', 2);
       doc.font('Helvetica').fontSize(9).fillColor('#334155')
         .text('To compensate for low-frequency thermal drift, structural tilt, or orientation change, the baseline is continuously updated in the background using an Exponential Moving Average (EMA) filter:', { align: 'justify', lineGap: 2.5 });
       doc.moveDown(0.4);
@@ -75,7 +106,7 @@ export async function generatePDFManual() {
       ];
       drawMathBlock(doc, parts2, 'EMA baseline update equation with smoothing parameter alpha = 0.15.');
 
-      drawHeading(doc, '2.3 Variance-Based Jerk Detection', 2);
+      drawHeading(doc, '3.3 Variance-Based Jerk Detection', 2);
       doc.font('Helvetica').fontSize(9).fillColor('#334155')
         .text('To save host processing power, spectral analysis is only triggered when significant dynamic movement is detected. The ESP8266 monitors standard deviation (variance) over a rolling 64-sample window:', { align: 'justify', lineGap: 2.5 });
       doc.moveDown(0.4);
@@ -91,14 +122,14 @@ export async function generatePDFManual() {
       drawMathBlock(doc, parts3, 'Calculates rolling signal variance. The active trigger threshold is set to 1.5 * sigma.');
 
       // ==========================================
-      // PAGE 2: FREQUENCY-DOMAIN ANALYSIS
+      // PAGE 4: FREQUENCY-DOMAIN ANALYSIS
       // ==========================================
       doc.addPage();
       doc.y = 64;
 
-      drawHeading(doc, '3. Frequency-Domain Analysis', 1);
+      drawHeading(doc, '4. Frequency-Domain Analysis', 1);
       
-      drawHeading(doc, '3.1 Spectral Leakage & Hamming Windowing', 2);
+      drawHeading(doc, '4.1 Spectral Leakage & Hamming Windowing', 2);
       doc.font('Helvetica').fontSize(9).fillColor('#334155')
         .text('Because the captured time buffer is finite (N = 128 samples), direct FFT computation causes severe spectral leakage at window boundaries. To mitigate this, a Hamming Window is applied to pre-taper the dataset:', { align: 'justify', lineGap: 2.5 });
       doc.moveDown(0.4);
@@ -110,7 +141,7 @@ export async function generatePDFManual() {
       ];
       drawMathBlock(doc, parts4, 'Hamming coefficients applied as: Z_windowed[n] = Z[n] * W(n).');
 
-      drawHeading(doc, '3.2 Cooley-Tukey Radix-2 FFT', 2);
+      drawHeading(doc, '4.2 Cooley-Tukey Radix-2 FFT', 2);
       doc.font('Helvetica').fontSize(9).fillColor('#334155')
         .text('The server transforms windowed acceleration data using the Decimation-in-Time Cooley-Tukey FFT algorithm, reducing computational complexity from O(N²) to O(N log N):', { align: 'justify', lineGap: 2.5 });
       doc.moveDown(0.4);
@@ -127,7 +158,7 @@ export async function generatePDFManual() {
       ];
       drawMathBlock(doc, parts5, 'Discrete Fourier Transform computed recursively.');
 
-      drawHeading(doc, '3.3 Scaling & Nyquist Criterion', 2);
+      drawHeading(doc, '4.3 Scaling & Nyquist Criterion', 2);
       doc.font('Helvetica').fontSize(9).fillColor('#334155')
         .text('To output true physical G-forces on the charts, complex FFT outputs are scaled. Based on the Nyquist criterion, with a sampling rate of Fs = 500 Hz, the maximum resolved frequency is 250 Hz. The frequency spacing between bins is:', { align: 'justify', lineGap: 2.5 });
       doc.moveDown(0.4);
@@ -147,9 +178,9 @@ export async function generatePDFManual() {
       ];
       drawMathBlock(doc, parts6b, 'Magnitude scaling to compute true physical G-force amplitude.');
 
-      drawHeading(doc, '4. Structural Resonance & Damping', 1);
+      drawHeading(doc, '5. Structural Resonance & Damping', 1);
       
-      drawHeading(doc, '4.1 Half-Power Bandwidth (Q-Factor)', 2);
+      drawHeading(doc, '5.1 Half-Power Bandwidth (Q-Factor)', 2);
       doc.font('Helvetica').fontSize(9).fillColor('#334155')
         .text('Resonance is identified as the highest peak frequency (fn) in the magnitude spectrum. The Quality Factor (Q), representing the sharpness of resonance and system energy storage, is determined by:', { align: 'justify', lineGap: 2.5 });
       doc.moveDown(0.4);
@@ -166,16 +197,16 @@ export async function generatePDFManual() {
       drawMathBlock(doc, parts7, 'Where f1 and f2 are the frequencies where response falls to 0.707 * A_max.');
 
       // ==========================================
-      // PAGE 3: DAMPING RATIO, TABLE & CALCULATOR
+      // PAGE 5: DAMPING RATIO, TABLE & CALCULATOR
       // ==========================================
       doc.addPage();
       doc.y = 64;
 
-      // Draw Heading 4.2 with ζ (Zeta) Symbol
+      // Draw Heading 5.2 with ζ (Zeta) Symbol
       const headingY = doc.y;
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#0f172a');
-      doc.text('4.2 Damping Ratio (', 54, headingY, { lineBreak: false });
-      let curX = 54 + doc.widthOfString('4.2 Damping Ratio (');
+      doc.text('5.2 Damping Ratio (', 54, headingY, { lineBreak: false });
+      let curX = 54 + doc.widthOfString('5.2 Damping Ratio (');
       doc.font('Symbol').fontSize(9.5);
       doc.text('z', curX, headingY, { lineBreak: false });
       curX += doc.widthOfString('z');
@@ -199,7 +230,7 @@ export async function generatePDFManual() {
       drawDampingTable(doc);
       doc.moveDown(1.2);
 
-      drawHeading(doc, '5. Interactive Calculator Guide', 1);
+      drawHeading(doc, '6. Interactive Calculator Guide', 1);
       doc.font('Helvetica').fontSize(9).fillColor('#334155')
         .text('The dashboard manual contains an Interactive DSP Playground to simulate resonance parameters. Entering the peak resonance frequency fn, cutoff limits f1 and f2, and peak amplitude yields the damping coefficient. Robust validation checks ensure f1 < fn < f2 and prevent arithmetic boundary overflows. The calculated damping ratio is matched against the classifications table to provide structural recommendations.', { align: 'justify', lineGap: 2.5 });
 
@@ -433,4 +464,89 @@ function drawPageNumbers(doc) {
     // Restore bottom margin
     doc.page.margins.bottom = oldBottomMargin;
   }
+}
+
+function drawHardwareTable(doc) {
+  doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#0f172a').text('Pinout Connection Matrix');
+  doc.moveDown(0.4);
+
+  const tableTop = doc.y;
+  const colWidths = [110, 70, 110, 197];
+  const colPositions = [54, 54 + colWidths[0], 54 + colWidths[0] + colWidths[1], 54 + colWidths[0] + colWidths[1] + colWidths[2]];
+  const rowHeight = 24;
+
+  // Header row
+  doc.rect(54, tableTop, 487, rowHeight).fill('#1e3a8a');
+  doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#ffffff');
+  doc.text('MPU9250 Pin (Sensor)', colPositions[0] + 6, tableTop + 8);
+  doc.text('Signal Direction', colPositions[1] + 6, tableTop + 8);
+  doc.text('ESP8266 Pin (Brain)', colPositions[2] + 6, tableTop + 8);
+  doc.text('Purpose / Description', colPositions[3] + 6, tableTop + 8);
+
+  let currentY = tableTop + rowHeight;
+  const rows = [
+    { sensor: 'VCC', conn: '◄━━━━━━━━', esp: '3V3', purpose: 'Power Rail (3.3V DC; NOT 5V)' },
+    { sensor: 'GND', conn: '◄━━━━━━━━►', esp: 'G (or GND)', purpose: 'Reference Ground Loop' },
+    { sensor: 'SCL', conn: '◄━━━━━━━━', esp: 'D1 (GPIO5)', purpose: 'Serial Clock Bus Line' },
+    { sensor: 'SDA', conn: '◄━━━━━━━━►', esp: 'D2 (GPIO4)', purpose: 'Serial Data Bus Line' },
+    { sensor: 'AD0', conn: '━━━━━━━━►', esp: 'G (or GND)', purpose: 'Locks I2C address to 0x68' }
+  ];
+
+  rows.forEach((r, idx) => {
+    if (idx % 2 === 1) {
+      doc.rect(54, currentY, 487, rowHeight).fill('#f8fafc');
+    }
+
+    doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#334155').text(r.sensor, colPositions[0] + 6, currentY + 8);
+    doc.font('Helvetica').fontSize(8.5).fillColor('#94a3b8').text(r.conn, colPositions[1] + 6, currentY + 8);
+    doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#1e3a8a').text(r.esp, colPositions[2] + 6, currentY + 8);
+    doc.font('Helvetica').fontSize(8.5).fillColor('#475569').text(r.purpose, colPositions[3] + 6, currentY + 8);
+
+    doc.lineWidth(0.5).strokeColor('#e2e8f0').moveTo(54, currentY + rowHeight).lineTo(541, currentY + rowHeight).stroke();
+    currentY += rowHeight;
+  });
+
+  doc.y = currentY;
+}
+
+function drawWiringStep(doc, stepNum, title, desc) {
+  const startY = doc.y;
+  
+  doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#0f172a')
+    .text(`STEP ${stepNum}: ${title.toUpperCase()}`, 64, startY + 2);
+  
+  doc.font('Helvetica').fontSize(9).fillColor('#475569')
+    .text(desc, 64, doc.y + 2, { width: 477, align: 'justify', lineGap: 2 });
+  
+  const endY = doc.y;
+  
+  doc.lineWidth(1.5).strokeColor('#10b981')
+    .moveTo(54, startY + 2)
+    .lineTo(54, endY)
+    .stroke();
+    
+  doc.moveDown(0.6);
+}
+
+function drawWarningBox(doc, title, desc) {
+  const startY = doc.y;
+  
+  doc.font('Helvetica-Bold').fontSize(9);
+  const titleHeight = doc.heightOfString(title, { width: 467 });
+  
+  doc.font('Helvetica').fontSize(8.5);
+  const descHeight = doc.heightOfString(desc, { width: 467, lineGap: 1.5 });
+  
+  const boxHeight = titleHeight + descHeight + 16;
+  
+  doc.rect(54, startY, 487, boxHeight).fill('#fef2f2');
+  doc.rect(54, startY, 487, boxHeight).lineWidth(0.5).stroke('#fca5a5');
+  
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#991b1b')
+    .text(title, 64, startY + 8);
+  
+  doc.font('Helvetica').fontSize(8.5).fillColor('#7f1d1d')
+    .text(desc, 64, doc.y + 3, { width: 467, lineGap: 1.5 });
+  
+  doc.y = startY + boxHeight;
 }
