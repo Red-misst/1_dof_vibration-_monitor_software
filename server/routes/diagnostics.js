@@ -36,7 +36,9 @@ function getLocalIPs() {
 
 router.get('/', (req, res) => {
   const localIPs = getLocalIPs();
-  const hotspotIP = localIPs.find(i => i.address.startsWith('192.168.137.'))?.address || null;
+  const hotspotIP = localIPs.find(i => i.address.startsWith('192.168.137.'))?.address 
+                 || localIPs.find(i => i.address.startsWith('10.42.0.'))?.address 
+                 || (localIPs.length > 0 ? localIPs[0].address : null);
 
   res.json({
     server: { ok: true, uptime: Math.floor(process.uptime()) },

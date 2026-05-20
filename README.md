@@ -22,40 +22,38 @@ A real-time vibration monitoring system focused on vertical (Z-axis) motion anal
 
 ### Software Stack
 - **Backend**: Node.js with Express and WebSocket
-- **Database**: MongoDB for session and data storage
+- **Database**: SQLite (local file `data/vibrations.db`)
 - **Frontend**: Vanilla JavaScript with Chart.js
 - **AI Integration**: DeepSeek API for analysis assistance and report generation
-- **Deployment**: Render.com cloud platform
 
 ## Installation
 
 ### Prerequisites
-- Node.js 14+
-- MongoDB (local or cloud)
+- Node.js 16+ (npm included)
+- Build tools (installed automatically on Linux via setup script)
 - Arduino IDE for ESP8266 programming
-- DeepSeek API key
+- DeepSeek API key (optional, for AI features)
 
 ### Server Setup
 
-1. **Clone and install dependencies**:
-   ```bash
-   git clone <repository>
-   cd vibration
-   npm install
-   ```
+We provide automated setup and execution scripts for both Windows and Lubuntu/Linux.
 
-2. **Environment Configuration**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your MongoDB URI and DeepSeek API key
-   ```
+#### Windows
+1. **Setup (First time only)**: Double-click **`SETUP.bat`** to install npm dependencies and configure firewall rules.
+2. **Start (Every day)**: Double-click **`START.bat`** to boot the server and launch the web UI automatically.
 
-3. **Start the server**:
+#### Lubuntu / Linux
+1. **Setup (First time only)**: Open a terminal in the project directory, make the script executable, and run it:
    ```bash
-   npm start
-   # For development:
-   npm run dev
+   chmod +x setup.sh start.sh
+   ./setup.sh
    ```
+   *Note: This script will install required system dependencies (e.g. `build-essential`, `avahi-daemon`) and configure the UFW firewall, which will prompt for your sudo password.*
+2. **Start (Every day)**: Run the start script:
+   ```bash
+   ./start.sh
+   ```
+   *This launches the backend service and opens your default web browser.*
 
 ### ESP8266 Setup
 
@@ -269,14 +267,14 @@ The system performs automatic frequency domain analysis:
 
 2. **Report generation fails**
    - Ensure session has sufficient data points
-   - Check for MongoDB connection issues
+   - Check database write permissions on `data/vibrations.db`
    - Verify PDF generation dependencies
 
 ### Debug Commands
 
 ```bash
-# Check MongoDB connection
-mongo "your_connection_string"
+# Check SQLite database tables
+sqlite3 data/vibrations.db .tables
 
 # View logs in development
 npm run dev
@@ -301,6 +299,6 @@ MIT License - see LICENSE file for details.
 
 For technical support:
 1. Check the troubleshooting section
-2. Review MongoDB and WebSocket logs
+2. Review server console and WebSocket logs
 3. Verify ESP8266 serial output
 4. Open GitHub issue with detailed information

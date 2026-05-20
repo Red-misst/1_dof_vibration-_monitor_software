@@ -2,13 +2,21 @@
 
 ## Quick Start (3 steps)
 
-### Step 1 — First time only: Run SETUP.bat
-Double-click **`SETUP.bat`** and wait for it to complete.
-> This installs all software dependencies and opens firewall ports. Internet is required once for this step.
+### Step 1 — First time only: Run the Setup Script
+- **Windows**: Double-click **`SETUP.bat`** and wait for it to complete.
+- **Lubuntu / Linux**: Open a terminal in the folder, make the script executable (`chmod +x setup.sh`), and run it:
+  ```bash
+  ./setup.sh
+  ```
+> This installs all system and software dependencies and opens firewall ports. Internet is required once for this step.
 
-### Step 2 — Every day: Run START.bat
-Double-click **`START.bat`**.
-> The browser will open automatically at `http://localhost:3000`. A small black window stays open in the taskbar — this is the server. **Don't close it** while using the app.
+### Step 2 — Every day: Run the Start Script
+- **Windows**: Double-click **`START.bat`**.
+- **Lubuntu / Linux**: Run the start script:
+  ```bash
+  ./start.sh
+  ```
+> The browser will open automatically at `http://localhost:3000`. A terminal window stays open in the background — this is the server. **Don't close it** while using the app.
 
 ### Step 3 — Connect your ESP8266
 Connect the ESP8266 to the **same WiFi hotspot as your PC**.
@@ -18,10 +26,24 @@ Connect the ESP8266 to the **same WiFi hotspot as your PC**.
 
 ## Setting Up the WiFi Hotspot
 
-1. On your PC: Go to **Settings → Mobile Hotspot** → Turn it on
-2. Note the **Network name** and **Password** shown
-3. On the ESP8266: Connect to that same WiFi network
-4. Both devices are now on the same network and can communicate
+### Windows
+1. Go to **Settings → Network & internet → Mobile hotspot** → Turn it on.
+2. Note the **Network name** and **Network password** shown.
+
+### Lubuntu / Linux (LXQt)
+1. Click the network icon in the panel (bottom right) and select **Edit Connections...** (or run `nm-connection-editor`).
+2. Click the **+** (plus) icon to add a new connection.
+3. Choose **Wi-Fi** as the connection type and click **Create...**.
+4. In the **Wi-Fi** tab:
+   - Set **SSID** to a name of your choice (e.g. `vibration-hotspot`).
+   - Change **Mode** to **Hotspot**.
+5. In the **Wi-Fi Security** tab:
+   - Set **Security** to **WPA & WPA2 Personal**.
+   - Enter a **Password** (e.g. `MoiVibrations2026`).
+6. In the **IPv4 Settings** tab:
+   - Verify that **Method** is set to **Shared to other computers** (this is NetworkManager's default hotspot mode, which automatically assigns `10.42.0.1` as the gateway/PC IP).
+7. Save and enable the connection.
+8. Connect your ESP8266 to this WiFi network. Both devices are now on the same subnet and can communicate.
 
 ---
 
@@ -37,11 +59,14 @@ const char* password = "YOUR_HOTSPOT_PASS"; // Your PC's hotspot password
 // Primary: mDNS (automatic)
 const char* serverHostname = "vibration-monitor.local";
 
-// Fallback: Windows hotspot always uses this IP
-IPAddress fallbackIP(192, 168, 137, 1);
+// Fallbacks if mDNS fails:
+// - Windows Mobile Hotspot default gateway IP: 192.168.137.1
+// - Lubuntu/Linux Hotspot default gateway IP:  10.42.0.1
+// Set the fallback according to your host operating system
+IPAddress fallbackIP(10, 42, 0, 1); // e.g. for Lubuntu hotspot
 ```
 
-> **This sketch only needs to be flashed once.** The server is found automatically by hostname — even if your PC's IP changes.
+> **This sketch only needs to be flashed once.** The server is found automatically by hostname using mDNS — even if your PC's IP changes. If mDNS resolution fails, the ESP8266 will attempt to connect to the fallback IP address.
 
 ---
 
@@ -95,7 +120,8 @@ Simply **close the black terminal window** (or press `Ctrl+C` in it). The browse
 | Problem | Solution |
 |---|---|
 | Browser doesn't open | Open manually: `http://localhost:3000` |
-| ESP8266 not connecting | Check both are on the same hotspot |
-| "Dependencies not installed" | Run SETUP.bat again |
-| AI not working | Check .env file has DEEPSEEK_API_KEY |
-| Port 3000 in use | Close other apps using port 3000 |
+| ESP8266 not connecting | Check both are on the same hotspot. Check that the firewall (UFW on Linux or Windows Firewall) is allowing port 3000 (TCP) and 5353 (UDP). |
+| "Dependencies not installed" | Run `SETUP.bat` (Windows) or `setup.sh` (Linux) again. |
+| AI not working | Check .env file has DEEPSEEK_API_KEY. |
+| Port 3000 in use | Close other apps using port 3000. |
+| mDNS not resolving on Linux | Ensure Avahi Daemon is running: `sudo systemctl status avahi-daemon` |
