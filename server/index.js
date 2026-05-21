@@ -55,12 +55,12 @@ createWebSocketServer(server);
 
 // ── Start ─────────────────────────────────────────────────────────────────
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log("");
   console.log("╔══════════════════════════════════════════════════╗");
   console.log("║       Z-Axis Vibration Monitor v2.0              ║");
   console.log("╠══════════════════════════════════════════════════╣");
-  console.log(`║  Web UI:  http://localhost:${PORT}                   ║`);
+  console.log(`║  Web UI:  http://0.0.0.0:${PORT}                      ║`);
   console.log(`║  mDNS:    vibration-monitor.local:${PORT}            ║`);
   console.log("║  DB:      data/vibrations.db (local SQLite)      ║");
   console.log("╚══════════════════════════════════════════════════╝");
