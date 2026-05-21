@@ -37,28 +37,12 @@ if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 
 // Serve static files with proper MIME types
 app.use(express.static(PUBLIC_DIR, {
-  setHeaders: (res, path) => {
-    if (path.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    else if (path.endsWith('.css')) res.setHeader('Content-Type', 'text/css; charset=utf-8');
-    else if (path.endsWith('.json')) res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    else if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css; charset=utf-8');
+    else if (filePath.endsWith('.json')) res.setHeader('Content-Type', 'application/json; charset=utf-8');
   }
 }));
-
-// Serve index.html for SPA routing
-app.get("/", (req, res) => {
-  const indexPath = path.join(PUBLIC_DIR, "index.html");
-  if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
-  res.status(404).send("Web interface not found. Check the public/ directory.");
-});
-
-// Catch-all for client-side routing
-app.get("*", (req, res, next) => {
-  // Skip if this is an API route
-  if (req.path.startsWith("/api")) return next();
-  const indexPath = path.join(PUBLIC_DIR, "index.html");
-  if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
-  res.status(404).send("Web interface not found.");
-});
 
 // ── API Routes ────────────────────────────────────────────────────────────
 
@@ -66,6 +50,30 @@ app.use("/api/sessions", sessionRoutes);
 app.use("/api/export", exportRoutes);
 app.use("/api", aiRoutes);
 app.use("/api/diagnostics", diagnosticsRoutes);
+
+// ── SPA Fallback (must come AFTER static and API routes) ────────────────
+
+// Favicon handler
+app.get("/favicon.ico", (req, res) => {
+  res.status(204).end(); // No content
+});
+
+// Serve root
+app.get("/", (req, res) => {
+  const indexPath = path.join(PUBLIC_DIR, "index.html");
+  if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
+  res.status(404).send("Web interface not found. Check the public/ directory.");
+});
+
+// Catch-all for SPA client-side routing — only for requests without extensions
+app.get("*", (req, res) => {
+  // Only serve index.html for paths without extensions
+  if (!req.path.includes(".")) {
+    const indexPath = path.join(PUBLIC_DIR, "index.html");
+    if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
+  }
+  res.status(404).send("Not found.");
+});
 
 // ── WebSocket ─────────────────────────────────────────────────────────────
 
