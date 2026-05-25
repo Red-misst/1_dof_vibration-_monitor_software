@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include <MPU9250_asukiaaa.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
 
@@ -10,9 +11,13 @@ const char* ssid = "Galaxy";
 const char* password = "Barake2023";
 
 // WebSocket Server Configuration (Offline Mode)
-// Primary: vibration-monitor.local (mDNS)
-// Fallback: 192.168.137.1 (Windows Mobile Hotspot default IP)
-const char* host = "vibration-monitor.local";
+// Primary mDNS domain (without .local)
+const char* mdnsDomain = "vibration-monitor";
+// Fallback configuration if mDNS resolver fails
+// - Windows Hotspot default gateway IP: 192.168.137.1
+// - Linux/Lubuntu Hotspot default gateway IP: 10.42.0.1
+IPAddress fallbackIP(10, 42, 0, 1);
+
 const int port = 3000;
 const char* url = "/esp8266";  // WebSocket path
 // DSP Config
@@ -96,10 +101,51 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
   Serial.println("\n✅ WiFi Connected");
 
+  // Initialize mDNS client responder
+  if (!MDNS.begin("esp8266-client")) {
+    Serial.println("❌ mDNS client registration failed");
+  } else {
+    Serial.println("✅ mDNS responder active");
+  }
+
   calibrateSensor();
   initialized = true;
 
-  webSocket.begin(host, port, url);  // Plain ws://
+  // Resolve WebSocket Server IP Address
+  Serial.println("🔍 Resolving server IP...");
+  IPAddress serverIP;
+  bool serverResolved = false;
+
+  // Try to query vibration-monitor.local using mDNS client query
+  for (int attempt = 1; attempt <= 3; attempt++) {
+    Serial.printf("mDNS query attempt %d/3...\n", attempt);
+    int n = MDNS.queryHost(mdnsDomain, 2000); // 2 seconds timeout per query
+    if (n > 0) {
+      serverIP = MDNS.IP(0);
+      serverResolved = true;
+      Serial.print("✅ Server IP resolved via mDNS: ");
+      Serial.println(serverIP);
+      break;
+    }
+    delay(500);
+  }
+
+  if (serverResolved) {
+    webSocket.begin(serverIP, port, url);
+  } else {
+    // Fall back to gateway IP or configured fallback IP
+    IPAddress gatewayIP = WiFi.gatewayIP();
+    if (gatewayIP[0] == 10 || gatewayIP[0] == 172 || (gatewayIP[0] == 192 && gatewayIP[1] == 168)) {
+      Serial.print("⚠️ mDNS resolution failed. Connecting to gateway: ");
+      Serial.println(gatewayIP);
+      webSocket.begin(gatewayIP, port, url);
+    } else {
+      Serial.print("⚠️ mDNS failed and no standard gateway found. Connecting to fallback IP: ");
+      Serial.println(fallbackIP);
+      webSocket.begin(fallbackIP, port, url);
+    }
+  }
+
   webSocket.onEvent(webSocketEvent);
   webSocket.setReconnectInterval(5000);
 

@@ -143,3 +143,8 @@ build/
 dist/
 *.min.js
 *.min.css
+
+# Do not ignore vendor dependencies
+!/public/vendor/**/*.min.js
+!/public/vendor/**/*.min.css
+
