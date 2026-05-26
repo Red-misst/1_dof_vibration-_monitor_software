@@ -14,6 +14,7 @@ import fs from "fs";
 
 import { createWebSocketServer } from "../websocket/index.js";
 import { startMDNS, stopMDNS } from "./mdns.js";
+import { startSerialListener, stopSerialListener } from "./serial.js";
 import sessionRoutes from "./routes/sessions.js";
 import exportRoutes from "./routes/export.js";
 import aiRoutes from "./routes/ai.js";
@@ -92,6 +93,7 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log("╚══════════════════════════════════════════════════╝");
   console.log("");
   startMDNS(PORT);
+  startSerialListener();
 });
 
 // ── Graceful Shutdown ─────────────────────────────────────────────────────
@@ -99,6 +101,7 @@ server.listen(PORT, "0.0.0.0", () => {
 function shutdown() {
   console.log("\n[Server] Shutting down...");
   stopMDNS();
+  stopSerialListener();
   server.close(() => {
     console.log("[Server] Stopped.");
     process.exit(0);
