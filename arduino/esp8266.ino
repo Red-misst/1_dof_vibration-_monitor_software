@@ -39,8 +39,17 @@ WebSocketsClient webSocket;
 
 String deviceId = "ESP8266_" + String(ESP.getChipId(), HEX);
 bool initialized = false;
+bool isWsConnected = false;
 double baselineGravity = 0;
 double prevZ = 0;
+
+void sendTelemetry(const String& payload) {
+  if (isWsConnected) {
+    webSocket.sendTXT(payload);
+  } else {
+    Serial.println(payload);
+  }
+}
 
 double batchBuffer[SAMPLES];
 
@@ -48,10 +57,12 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
   switch (type) {
     case WStype_DISCONNECTED:
       Serial.println("❌ WebSocket Disconnected");
+      isWsConnected = false;
       digitalWrite(LED_BUILTIN, HIGH);
       break;
     case WStype_CONNECTED:
       Serial.printf("✅ WebSocket Connected: %s\n", payload);
+      isWsConnected = true;
       digitalWrite(LED_BUILTIN, LOW);
       {
         String msg = "{\"type\":\"device_connected\",\"deviceId\":\"" + deviceId + "\"}";
@@ -93,67 +104,91 @@ void setup() {
 
   Serial.println("Connecting to WiFi...");
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+  unsigned long startAttemptTime = millis();
+  bool wifiConnected = false;
+
+  // Attempt to connect to WiFi for up to 10 seconds
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 10000) {
     delay(500);
     Serial.print(".");
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
-  digitalWrite(LED_BUILTIN, LOW);
-  Serial.println("\n✅ WiFi Connected");
 
-  // Initialize mDNS client responder
-  if (!MDNS.begin("esp8266-client")) {
-    Serial.println("❌ mDNS client registration failed");
+  if (WiFi.status() == WL_CONNECTED) {
+    digitalWrite(LED_BUILTIN, LOW);
+    Serial.println("\n✅ WiFi Connected");
+    wifiConnected = true;
   } else {
-    Serial.println("✅ mDNS responder active");
+    digitalWrite(LED_BUILTIN, HIGH); // Keep status LED off (HIGH is off on ESP8266)
+    Serial.println("\n⚠️ WiFi Connection Failed (Timeout). Bypassing to USB Serial fallback mode.");
   }
 
-  calibrateSensor();
-  initialized = true;
-
-  // Resolve WebSocket Server IP Address
-  Serial.println("🔍 Resolving server IP...");
-  IPAddress serverIP;
-  bool serverResolved = false;
-
-  // Try to query vibration-monitor.local using mDNS client query
-  for (int attempt = 1; attempt <= 3; attempt++) {
-    Serial.printf("mDNS query attempt %d/3...\n", attempt);
-    int n = MDNS.queryHost(mdnsDomain, 2000); // 2 seconds timeout per query
-    if (n > 0) {
-      serverIP = MDNS.IP(0);
-      serverResolved = true;
-      Serial.print("✅ Server IP resolved via mDNS: ");
-      Serial.println(serverIP);
-      break;
-    }
-    delay(500);
-  }
-
-  if (serverResolved) {
-    webSocket.begin(serverIP, port, url);
-  } else {
-    // Fall back to gateway IP or configured fallback IP
-    IPAddress gatewayIP = WiFi.gatewayIP();
-    if (gatewayIP[0] == 10 || gatewayIP[0] == 172 || (gatewayIP[0] == 192 && gatewayIP[1] == 168)) {
-      Serial.print("⚠️ mDNS resolution failed. Connecting to gateway: ");
-      Serial.println(gatewayIP);
-      webSocket.begin(gatewayIP, port, url);
+  if (wifiConnected) {
+    // Initialize mDNS client responder
+    if (!MDNS.begin("esp8266-client")) {
+      Serial.println("❌ mDNS client registration failed");
     } else {
-      Serial.print("⚠️ mDNS failed and no standard gateway found. Connecting to fallback IP: ");
-      Serial.println(fallbackIP);
-      webSocket.begin(fallbackIP, port, url);
+      Serial.println("✅ mDNS responder active");
     }
-  }
 
-  webSocket.onEvent(webSocketEvent);
-  webSocket.setReconnectInterval(5000);
+    calibrateSensor();
+    initialized = true;
+
+    // Resolve WebSocket Server IP Address
+    Serial.println("🔍 Resolving server IP...");
+    IPAddress serverIP;
+    bool serverResolved = false;
+
+    // Try to query vibration-monitor.local using mDNS client query
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      Serial.printf("mDNS query attempt %d/3...\n", attempt);
+      int n = MDNS.queryHost(mdnsDomain, 2000); // 2 seconds timeout per query
+      if (n > 0) {
+        serverIP = MDNS.IP(0);
+        serverResolved = true;
+        Serial.print("✅ Server IP resolved via mDNS: ");
+        Serial.println(serverIP);
+        break;
+      }
+      delay(500);
+    }
+
+    if (serverResolved) {
+      webSocket.begin(serverIP, port, url);
+    } else {
+      // Fall back to gateway IP or configured fallback IP
+      IPAddress gatewayIP = WiFi.gatewayIP();
+      if (gatewayIP[0] == 10 || gatewayIP[0] == 172 || (gatewayIP[0] == 192 && gatewayIP[1] == 168)) {
+        Serial.print("⚠️ mDNS resolution failed. Connecting to gateway: ");
+        Serial.println(gatewayIP);
+        webSocket.begin(gatewayIP, port, url);
+      } else {
+        Serial.print("⚠️ mDNS failed and no standard gateway found. Connecting to fallback IP: ");
+        Serial.println(fallbackIP);
+        webSocket.begin(fallbackIP, port, url);
+      }
+    }
+
+    webSocket.onEvent(webSocketEvent);
+    webSocket.setReconnectInterval(5000);
+  } else {
+    // Run in standalone USB serial telemetry mode
+    calibrateSensor();
+    initialized = true;
+    Serial.println("🔌 Running in USB Serial telemetry mode (115200 baud)");
+    
+    // Register device over serial on startup
+    String connectMsg = "{\"type\":\"device_connected\",\"deviceId\":\"" + deviceId + "\"}";
+    Serial.println(connectMsg);
+  }
 
   Serial.println("🔧 Ready: Sampling at 500Hz");
 }
 
 void loop() {
-    webSocket.loop();
+    if (WiFi.status() == WL_CONNECTED) {
+        webSocket.loop();
+    }
 
     mySensor.accelUpdate();
     double z = mySensor.accelZ();
@@ -210,7 +245,7 @@ void loop() {
 
         String jsonPayload;
         serializeJson(doc, jsonPayload);
-        webSocket.sendTXT(jsonPayload);
+        sendTelemetry(jsonPayload);
 
         delay(100);  // Debounce after heavy sampling
     } else {
@@ -224,7 +259,7 @@ void loop() {
 
         String jsonPayload;
         serializeJson(doc, jsonPayload);
-        webSocket.sendTXT(jsonPayload);
+        sendTelemetry(jsonPayload);
         
         delay(50); // More frequent baseline updates
     }

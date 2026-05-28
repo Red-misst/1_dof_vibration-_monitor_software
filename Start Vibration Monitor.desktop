@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Start Vibration Monitor
+Comment=Starts the Vibration Monitor Server and opens the UI
+Exec=bash -c 'cd "/home/redmisst/Desktop/1_dof_vibration-_monitor_software" && (sleep 2 && xdg-open http://localhost:3000 &) && npm start'
+Icon=utilities-terminal
+Terminal=true
+Type=Application
+Categories=Application;
