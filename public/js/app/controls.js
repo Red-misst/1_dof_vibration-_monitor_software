@@ -8,6 +8,8 @@ import { clearAllCharts } from './charts.js';
 
 let isRecording = false;
 let connectedDevices = new Set();
+let stopTestTimeout = null;
+let countdownInterval = null;
 
 export function initControls() {
   document.getElementById('startTest')?.addEventListener('click', handleStartTest);
@@ -30,10 +32,47 @@ function handleStartTest() {
   if (errEl) errEl.classList.add('hidden');
 
   sendMessage({ type: 'start_test', sessionName: name });
+
+  const durationInput = document.getElementById('testDuration');
+  const duration = parseInt(durationInput?.value, 10);
+  
+  const countdownDisplay = document.getElementById('countdownDisplay');
+  const countdownSeconds = document.getElementById('countdownSeconds');
+  
+  if (duration > 0) {
+    if (countdownDisplay) countdownDisplay.style.display = 'inline';
+    if (countdownSeconds) countdownSeconds.textContent = duration;
+    const targetEndTime = Date.now() + duration * 1000;
+    
+    countdownInterval = setInterval(() => {
+      const remaining = Math.ceil((targetEndTime - Date.now()) / 1000);
+      if (remaining >= 0 && countdownSeconds) {
+        countdownSeconds.textContent = remaining;
+      }
+    }, 1000);
+
+    stopTestTimeout = setTimeout(() => {
+      if (isRecording) {
+        handleStopTest();
+      }
+    }, duration * 1000);
+  } else {
+    if (countdownDisplay) countdownDisplay.style.display = 'none';
+  }
 }
 
 function handleStopTest() {
   sendMessage({ type: 'stop_test' });
+  if (stopTestTimeout) {
+    clearTimeout(stopTestTimeout);
+    stopTestTimeout = null;
+  }
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+  const countdownDisplay = document.getElementById('countdownDisplay');
+  if (countdownDisplay) countdownDisplay.style.display = 'none';
 }
 
 function handleExport() {

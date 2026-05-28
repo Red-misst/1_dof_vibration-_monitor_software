@@ -48,7 +48,7 @@ export function initCharts() {
     data: { 
       labels: [], 
       datasets: [{ 
-        label: 'Raw Z (g)', 
+        label: 'Raw Z (mm/s²)', 
         data: [], 
         borderColor: CHART_COLORS.blue, 
         backgroundColor: CHART_COLORS.blueAlpha, 
@@ -66,7 +66,7 @@ export function initCharts() {
     data: { 
       labels: [], 
       datasets: [{ 
-        label: 'Delta Z (g)', 
+        label: 'Delta Z (mm/s²)', 
         data: [], 
         borderColor: CHART_COLORS.purple, 
         backgroundColor: CHART_COLORS.purpleAlpha, 
@@ -126,17 +126,17 @@ export function pushChartData(chart, label, value, maxPoints = 50) {
 
 export function updateVibrationCharts(data) {
   const ts = new Date(data.timestamp || Date.now()).toLocaleTimeString();
-  pushChartData(rawZChart, ts, data.rawAcceleration || 0);
-  pushChartData(deltaZChart, ts, data.deltaZ || 0);
+  pushChartData(rawZChart, ts, (data.rawAcceleration || 0) * 9806.65);
+  pushChartData(deltaZChart, ts, (data.deltaZ || 0) * 9806.65);
 
   if (frequencyTimeChart && data.frequency) pushChartData(frequencyTimeChart, ts, data.frequency);
-  if (amplitudeTimeChart && data.amplitude) pushChartData(amplitudeTimeChart, ts, data.amplitude);
+  if (amplitudeTimeChart && data.amplitude) pushChartData(amplitudeTimeChart, ts, data.amplitude * 9806.65);
 }
 
 export function updateFrequencySpectrum(frequencies, magnitudes) {
   if (!frequencyChart || !frequencies || !magnitudes) return;
   frequencyChart.data.labels = frequencies.map(f => parseFloat(f).toFixed(1));
-  frequencyChart.data.datasets[0].data = magnitudes;
+  frequencyChart.data.datasets[0].data = magnitudes.map(m => m * 9806.65);
   frequencyChart.update('none');
 }
 
@@ -147,16 +147,16 @@ export function loadHistoricalCharts(vibData, frequencyData) {
   const timestamps = vibData.map(p => new Date(p.timestamp || p.receivedAt).toLocaleTimeString());
 
   rawZChart.data.labels = timestamps;
-  rawZChart.data.datasets[0].data = vibData.map(p => p.rawAcceleration || 0);
+  rawZChart.data.datasets[0].data = vibData.map(p => (p.rawAcceleration || 0) * 9806.65);
   rawZChart.update();
 
   deltaZChart.data.labels = timestamps;
-  deltaZChart.data.datasets[0].data = vibData.map(p => p.deltaZ || 0);
+  deltaZChart.data.datasets[0].data = vibData.map(p => (p.deltaZ || 0) * 9806.65);
   deltaZChart.update();
 
   if (frequencyData?.frequencies?.length) {
     frequencyChart.data.labels = frequencyData.frequencies.map(f => parseFloat(f).toFixed(1));
-    frequencyChart.data.datasets[0].data = frequencyData.magnitudes || frequencyData.amplitudes;
+    frequencyChart.data.datasets[0].data = (frequencyData.magnitudes || frequencyData.amplitudes).map(a => a * 9806.65);
     frequencyChart.update();
   }
 
@@ -168,7 +168,7 @@ export function loadHistoricalCharts(vibData, frequencyData) {
 
   if (amplitudeTimeChart) {
     amplitudeTimeChart.data.labels = timestamps;
-    amplitudeTimeChart.data.datasets[0].data = vibData.map(p => p.amplitude || 0);
+    amplitudeTimeChart.data.datasets[0].data = vibData.map(p => (p.amplitude || 0) * 9806.65);
     amplitudeTimeChart.update();
   }
 }

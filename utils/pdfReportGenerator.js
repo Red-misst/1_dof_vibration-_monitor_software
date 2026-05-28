@@ -157,12 +157,12 @@ function drawParametersTable(doc, session, zAxisData) {
   const dampingRatio = session.mechanicalProperties?.dampingRatio || (qFactor ? 1 / (2 * qFactor) : null);
 
   const rows = [
-    { name: 'Natural Frequency (fn)', val: session.naturalFrequency ? `${session.naturalFrequency.toFixed(2)} Hz` : 'N/A', desc: 'Primary dynamic resonance peak of the structural system.' },
-    { name: 'Peak Amplitude', val: session.peakAmplitude ? `${session.peakAmplitude.toFixed(4)} g` : 'N/A', desc: 'Maximum single vertical shock or cycle deviation.' },
+    { name: 'Natural Frequency (fn)', val: session.naturalFrequency ? `\${session.naturalFrequency.toFixed(2)} Hz` : 'N/A', desc: 'Primary dynamic resonance peak of the structural system.' },
+    { name: 'Peak Amplitude', val: session.peakAmplitude ? `\${(session.peakAmplitude * 9806.65).toFixed(4)} mm/s²` : 'N/A', desc: 'Maximum single vertical shock or cycle deviation.' },
     { name: 'Q Factor (Quality Coefficient)', val: qFactor ? qFactor.toFixed(2) : 'N/A', desc: 'Energy retention index; higher indicates sharp resonance.' },
     { name: 'Damping Ratio (ζ)', val: dampingRatio ? dampingRatio.toFixed(4) : 'N/A', desc: 'Determines rate of decaying vibration transients.' },
-    { name: 'Half-Power Bandwidth', val: bandwidth ? `${bandwidth.toFixed(3)} Hz` : 'N/A', desc: 'Frequency span representing -3 dB energy drop-off.' },
-    { name: 'RMS Acceleration', val: `${stats.rms.toFixed(4)} g`, desc: 'Average continuous kinetic energy equivalent.' }
+    { name: 'Half-Power Bandwidth', val: bandwidth ? `\${bandwidth.toFixed(3)} Hz` : 'N/A', desc: 'Frequency span representing -3 dB energy drop-off.' },
+    { name: 'RMS Acceleration', val: `\${(stats.rms * 9806.65).toFixed(4)} mm/s²`, desc: 'Average continuous kinetic energy equivalent.' }
   ];
 
   let currentY = doc.y;
@@ -193,16 +193,16 @@ function drawChartsSection(doc, session, zAxisData) {
   const chartY = doc.y;
 
   // 1. Time-Domain raw Z-Axis G-force
-  const sampledZData = sampleData(zAxisData.map(d => d.deltaZ || 0), 100);
+  const sampledZData = sampleData(zAxisData.map(d => (d.deltaZ || 0) * 9806.65), 100);
   const timeLabels = Array.from({ length: sampledZData.length }, (_, i) => i);
-  drawVectorLineChart(doc, 'Time-Domain Vibration Waveform (g vs. index)', timeLabels, sampledZData, chart1X, chartY, chartW, chartH, '#2563eb');
+  drawVectorLineChart(doc, 'Time-Domain Vibration Waveform (mm/s² vs. index)', timeLabels, sampledZData, chart1X, chartY, chartW, chartH, '#2563eb');
 
   // 2. Frequency-Domain FFT Spectrum
   const freqs = session.mechanicalProperties?.frequencies || [];
   const mags = session.mechanicalProperties?.magnitudes || [];
   if (freqs.length > 0 && mags.length > 0) {
     const sampledFreqs = sampleData(freqs, 100);
-    const sampledMags = sampleData(mags, 100);
+    const sampledMags = sampleData(mags.map(m => m * 9806.65), 100);
     drawVectorLineChart(doc, 'FFT Frequency Spectrum (Amplitude vs. Hz)', sampledFreqs, sampledMags, chart2X, chartY, chartW, chartH, '#818cf8');
   } else {
     // Fallback if no FFT data is present

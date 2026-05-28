@@ -49,13 +49,13 @@ export function generateFallbackAnalysis(reportContext) {
   let amplitudeNote = '';
   if (amp > 0) {
     if (amp < 0.05) {
-      amplitudeNote = 'Peak amplitude is **very low** (< 0.05 g) — vibration levels are within normal acceptable range.';
+      amplitudeNote = 'Peak amplitude is **very low** (< 490 mm/s²) — vibration levels are within normal acceptable range.';
     } else if (amp < 0.5) {
-      amplitudeNote = `Peak amplitude of **${amp.toFixed(3)} g** is moderate — monitor for increasing trends.`;
+      amplitudeNote = `Peak amplitude of **${(amp * 9806.65).toFixed(3)} mm/s²** is moderate — monitor for increasing trends.`;
     } else if (amp < 2.0) {
-      amplitudeNote = `Peak amplitude of **${amp.toFixed(3)} g** is elevated — investigate source of vibration.`;
+      amplitudeNote = `Peak amplitude of **${(amp * 9806.65).toFixed(3)} mm/s²** is elevated — investigate source of vibration.`;
     } else {
-      amplitudeNote = `Peak amplitude of **${amp.toFixed(3)} g** is HIGH — immediate inspection recommended.`;
+      amplitudeNote = `Peak amplitude of **${(amp * 9806.65).toFixed(3)} mm/s²** is HIGH — immediate inspection recommended.`;
     }
   }
 
@@ -80,7 +80,7 @@ ${summary}
 ${amplitudeNote ? `${amplitudeNote}\n` : ''}${dampingNote ? `${dampingNote}\n` : ''}
 
 **Data Points Collected:** ${readings || 0}
-**RMS Acceleration:** ${rmsValue?.toFixed(4) || 'N/A'} g
+**RMS Acceleration:** ${rmsValue ? (rmsValue * 9806.65).toFixed(4) : 'N/A'} mm/s²
 
 ---
 
@@ -90,11 +90,11 @@ ${interpretation}
 
 ### Measured Parameters & Diagnostic Thresholds
 - **Natural Frequency (fn):** ${freq ? freq.toFixed(3) + ' Hz' : 'Not detected'} (Primary resonance indicator)
-- **Peak Amplitude:** ${amp ? amp.toFixed(4) + ' g' : 'N/A'} (Dynamic displacement stress equivalent)
+- **Peak Amplitude:** ${amp ? (amp * 9806.65).toFixed(4) + ' mm/s²' : 'N/A'} (Dynamic displacement stress equivalent)
 - **Q Factor (Quality Coefficient):** ${qFactor ? qFactor.toFixed(2) : 'Not calculated'} (Resonant amplification factor)
 - **Damping Ratio (ζ):** ${dampingRatio ? dampingRatio.toFixed(4) : 'N/A'} (Rate of decaying transients)
 - **Half-Power Bandwidth:** ${bandwidth ? bandwidth.toFixed(3) + ' Hz' : 'N/A'} (-3dB sweep energy drop-off)
-- **RMS Acceleration (Arms):** ${rmsValue?.toFixed(4) || 'N/A'} g (Continuous energy equivalence)
+- **RMS Acceleration (Arms):** ${rmsValue ? (rmsValue * 9806.65).toFixed(4) + ' mm/s²' : 'N/A'} (Continuous energy equivalence)
 
 ### Structural Dynamics Interpretation
 Vibration amplitude and mechanical damping determine structural fatigue rates. The measured Q-Factor of **${qFactor ? qFactor.toFixed(2) : 'N/A'}** and damping ratio of **${dampingRatio ? dampingRatio.toFixed(4) : 'N/A'}** highlight the system's susceptibility to cyclic loading. If excitation forces align with the natural frequency of **${freq ? freq.toFixed(2) + ' Hz' : 'N/A'}**, amplitude amplification will occur, potentially causing mounting bracket cracking or fastener degradation.
@@ -135,7 +135,7 @@ Based on your session data, here is what I can tell you:
 
 - **Session:** ${session.name}
 - **Natural Frequency:** ${freq ? freq.toFixed(2) + ' Hz' : 'Not yet determined'}
-- **Peak Amplitude:** ${amp ? amp.toFixed(3) + ' g' : 'Not measured'}
+- **Peak Amplitude:** ${amp ? (amp * 9806.65).toFixed(3) + ' mm/s²' : 'Not measured'}
 - **Status:** ${session.isActive ? 'Active' : 'Completed'}
 
 Your question: *"${userMessage}"*

@@ -71,8 +71,8 @@ function handleMessage(data) {
     case 'vibration_data':
       window._dataPointCount = (window._dataPointCount || 0) + 1;
       document.getElementById('dataPointCount').textContent = window._dataPointCount;
-      document.getElementById('currentZValue').textContent = (data.deltaZ || 0).toFixed(3);
-      document.getElementById('amplitudeValue').textContent = (data.amplitude || 0).toFixed(3);
+      document.getElementById('currentZValue').textContent = ((data.deltaZ || 0) * 9806.65).toFixed(3);
+      document.getElementById('amplitudeValue').textContent = ((data.amplitude || 0) * 9806.65).toFixed(3);
       document.getElementById('frequencyValue').textContent = (data.frequency || 0).toFixed(2);
       updateVibrationCharts(data);
       break;
@@ -110,9 +110,9 @@ function handleMessage(data) {
       if (data.frequencyData) {
         document.getElementById('frequencyValue').textContent = (data.frequencyData.naturalFrequency || 0).toFixed(2);
         document.getElementById('qFactorValue').textContent = (data.frequencyData.qFactor || 0).toFixed(1);
-        document.getElementById('amplitudeValue').textContent = (data.frequencyData.peakAmplitude || 0).toFixed(3);
+        document.getElementById('amplitudeValue').textContent = ((data.frequencyData.peakAmplitude || 0) * 9806.65).toFixed(3);
         const lastZ = data.data && data.data.length > 0 ? data.data[data.data.length - 1].deltaZ : 0;
-        document.getElementById('currentZValue').textContent = (lastZ || 0).toFixed(3);
+        document.getElementById('currentZValue').textContent = ((lastZ || 0) * 9806.65).toFixed(3);
       }
       showNotification('Session data loaded', 'success');
       if (window.stopLoading) window.stopLoading();
@@ -125,7 +125,7 @@ function handleMessage(data) {
     case 'frequency_data':
       if (data.frequency) document.getElementById('frequencyValue').textContent = data.frequency.toFixed(2);
       if (data.qFactor) document.getElementById('qFactorValue').textContent = data.qFactor.toFixed(1);
-      if (data.amplitude) document.getElementById('amplitudeValue').textContent = data.amplitude.toFixed(3);
+      if (data.amplitude) document.getElementById('amplitudeValue').textContent = (data.amplitude * 9806.65).toFixed(3);
       if (data.frequencies && data.magnitudes) {
         updateFrequencySpectrum(data.frequencies, data.magnitudes);
       }
