@@ -13,7 +13,6 @@ let countdownInterval = null;
 
 export function initControls() {
   document.getElementById('startTest')?.addEventListener('click', handleStartTest);
-  document.getElementById('startSessionBtn')?.addEventListener('click', handleStartTest);
   document.getElementById('stopTest')?.addEventListener('click', handleStopTest);
   document.getElementById('exportData')?.addEventListener('click', handleExport);
 }
@@ -32,33 +31,6 @@ function handleStartTest() {
   if (errEl) errEl.classList.add('hidden');
 
   sendMessage({ type: 'start_test', sessionName: name });
-
-  const durationInput = document.getElementById('testDuration');
-  const duration = parseInt(durationInput?.value, 10);
-  
-  const countdownDisplay = document.getElementById('countdownDisplay');
-  const countdownSeconds = document.getElementById('countdownSeconds');
-  
-  if (duration > 0) {
-    if (countdownDisplay) countdownDisplay.style.display = 'inline';
-    if (countdownSeconds) countdownSeconds.textContent = duration;
-    const targetEndTime = Date.now() + duration * 1000;
-    
-    countdownInterval = setInterval(() => {
-      const remaining = Math.ceil((targetEndTime - Date.now()) / 1000);
-      if (remaining >= 0 && countdownSeconds) {
-        countdownSeconds.textContent = remaining;
-      }
-    }, 1000);
-
-    stopTestTimeout = setTimeout(() => {
-      if (isRecording) {
-        handleStopTest();
-      }
-    }, duration * 1000);
-  } else {
-    if (countdownDisplay) countdownDisplay.style.display = 'none';
-  }
 }
 
 function handleStopTest() {
@@ -84,7 +56,7 @@ function handleExport() {
   window.open(`/api/export/${sessionId}?format=xls`, '_blank');
 }
 
-export function onTestStarted(data) {
+export function onTestStarted(data, isNew = false) {
   isRecording = true;
   window._dataPointCount = 0;
   document.getElementById('dataPointCount').textContent = '0';
@@ -94,6 +66,35 @@ export function onTestStarted(data) {
   clearAllCharts();
   setButtonStates(true);
   sendMessage({ type: 'get_sessions' });
+
+  if (isNew) {
+    const durationInput = document.getElementById('testDuration');
+    const duration = parseInt(durationInput?.value, 10);
+    
+    const countdownDisplay = document.getElementById('countdownDisplay');
+    const countdownSeconds = document.getElementById('countdownSeconds');
+    
+    if (duration > 0) {
+      if (countdownDisplay) countdownDisplay.style.display = 'inline';
+      if (countdownSeconds) countdownSeconds.textContent = duration;
+      const targetEndTime = Date.now() + duration * 1000;
+      
+      countdownInterval = setInterval(() => {
+        const remaining = Math.ceil((targetEndTime - Date.now()) / 1000);
+        if (remaining >= 0 && countdownSeconds) {
+          countdownSeconds.textContent = remaining;
+        }
+      }, 1000);
+
+      stopTestTimeout = setTimeout(() => {
+        if (isRecording) {
+          handleStopTest();
+        }
+      }, duration * 1000);
+    } else {
+      if (countdownDisplay) countdownDisplay.style.display = 'none';
+    }
+  }
 }
 
 export function onTestStopped(data) {
@@ -132,13 +133,11 @@ function setButtonStates(recording) {
   const startBtn = document.getElementById('startTest');
   const stopBtn = document.getElementById('stopTest');
   const exportBtn = document.getElementById('exportData');
-  const startSessionBtn = document.getElementById('startSessionBtn');
 
-  [startBtn, startSessionBtn].forEach(b => {
-    if (!b) return;
-    b.disabled = recording;
-    b.classList.toggle('opacity-50', recording);
-  });
+  if (startBtn) {
+    startBtn.disabled = recording;
+    startBtn.classList.toggle('opacity-50', recording);
+  }
   if (stopBtn) { stopBtn.disabled = !recording; stopBtn.classList.toggle('opacity-50', !recording); }
   if (exportBtn) { exportBtn.disabled = recording; exportBtn.classList.toggle('opacity-50', recording); }
 }

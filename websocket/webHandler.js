@@ -77,9 +77,17 @@ async function routeMessage(ws, data) {
 
     case 'start_test': {
       const sessionName = data.sessionName || `Z-Axis Test ${new Date().toLocaleTimeString()}`;
-      const session = db.createSession({ name: sessionName });
-      setCurrentSession(session);
-      broadcastToWebClients({ type: 'test_started', sessionId: session.id, sessionName });
+      try {
+        const session = db.createSession({ name: sessionName });
+        setCurrentSession(session);
+        broadcastToWebClients({ type: 'test_started', sessionId: session.id, sessionName });
+      } catch (err) {
+        if (err.message.includes('UNIQUE constraint failed')) {
+          ws.send(JSON.stringify({ type: 'error', message: `A session named "${sessionName}" already exists. Please choose a different name.` }));
+        } else {
+          throw err;
+        }
+      }
       break;
     }
 

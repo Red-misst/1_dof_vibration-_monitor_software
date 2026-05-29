@@ -78,7 +78,7 @@ function handleMessage(data) {
       break;
 
     case 'session_status':
-      if (data.isActive) onTestStarted({ sessionId: data.sessionId });
+      if (data.isActive) onTestStarted({ sessionId: data.sessionId }, false);
       break;
 
     case 'device_status':
@@ -92,7 +92,7 @@ function handleMessage(data) {
     case 'test_started':
       window._dataPointCount = 0;
       clearAllCharts();
-      onTestStarted(data);
+      onTestStarted(data, true);
       break;
 
     case 'test_stopped':

@@ -372,55 +372,55 @@ router.get('/:sessionId', (req, res) => {
     </tr>
     <tr height="48" style="height: 48px;">
       <td colspan="2" class="metric-name">Maximum Peak Dynamic Acceleration Amplitude (Amax)</td>
-      <td class="metric-val">\${escapeHTML(session.peakAmplitude ? (session.peakAmplitude * 9806.65).toFixed(6) : 'N/A')}</td>
+      <td class="metric-val">${escapeHTML(session.peakAmplitude ? (session.peakAmplitude * 9806.65).toFixed(6) : 'N/A')}</td>
       <td class="metric-unit">mm/s²</td>
       <td colspan="3" class="metric-desc">Maximum dynamic acceleration amplitude in the frequency domain at the fundamental mode.</td>
     </tr>
     <tr height="48" style="height: 48px;">
       <td colspan="2" class="metric-name">Equivalent Structural Stiffness (k)</td>
-      <td class="metric-val">\${escapeHTML(mp.stiffness ? mp.stiffness.toFixed(2) : 'N/A')}</td>
+      <td class="metric-val">${escapeHTML(mp.stiffness ? mp.stiffness.toFixed(2) : 'N/A')}</td>
       <td class="metric-unit">N/m</td>
       <td colspan="3" class="metric-desc">Derived stiffness of the equivalent single-degree-of-freedom (SDOF) model using mass-resonance relationship.</td>
     </tr>
     <tr height="48" style="height: 48px;">
       <td colspan="2" class="metric-name">Viscous Damping Coefficient (c)</td>
-      <td class="metric-val">\${escapeHTML(mp.dampingCoefficient ? mp.dampingCoefficient.toFixed(4) : 'N/A')}</td>
+      <td class="metric-val">${escapeHTML(mp.dampingCoefficient ? mp.dampingCoefficient.toFixed(4) : 'N/A')}</td>
       <td class="metric-unit">N-s/m</td>
       <td colspan="3" class="metric-desc">Damping coefficient representing structural resistance to velocity (c = 2 * zeta * sqrt(k * m)).</td>
     </tr>
     <tr height="48" style="height: 48px;">
       <td colspan="2" class="metric-name">Dimensionless Modal Damping Ratio (&zeta;)</td>
-      <td class="metric-val">\${escapeHTML(mp.dampingRatio ? mp.dampingRatio.toFixed(6) : 'N/A')}</td>
+      <td class="metric-val">${escapeHTML(mp.dampingRatio ? mp.dampingRatio.toFixed(6) : 'N/A')}</td>
       <td class="metric-unit">-</td>
       <td colspan="3" class="metric-desc">Damping ratio (zeta) indicating structural attenuation rate relative to critical damping.</td>
     </tr>
     <tr height="48" style="height: 48px;">
       <td colspan="2" class="metric-name">Resonant Q-Factor (Amplification)</td>
-      <td class="metric-val">\${escapeHTML(mp.qFactor ? mp.qFactor.toFixed(4) : 'N/A')}</td>
+      <td class="metric-val">${escapeHTML(mp.qFactor ? mp.qFactor.toFixed(4) : 'N/A')}</td>
       <td class="metric-unit">-</td>
       <td colspan="3" class="metric-desc">Quality factor representing resonant magnification amplitude at modal excitation (Q = 1 / (2 * zeta)).</td>
     </tr>
     <tr height="48" style="height: 48px;">
       <td colspan="2" class="metric-name">Peak Jerk Amplitude (Max dZ/dt)</td>
-      <td class="metric-val">\${escapeHTML((maxDeltaZ * 9806.65).toFixed(6))}</td>
+      <td class="metric-val">${escapeHTML((maxDeltaZ * 9806.65).toFixed(6))}</td>
       <td class="metric-unit">mm/s²</td>
       <td colspan="3" class="metric-desc">Maximum time rate of change of acceleration, indicating high-frequency shock transients.</td>
     </tr>
     <tr height="48" style="height: 48px;">
       <td colspan="2" class="metric-name">Mean Absolute Jerk (Avg dZ/dt)</td>
-      <td class="metric-val">\${escapeHTML((avgDeltaZ * 9806.65).toFixed(6))}</td>
+      <td class="metric-val">${escapeHTML((avgDeltaZ * 9806.65).toFixed(6))}</td>
       <td class="metric-unit">mm/s²</td>
       <td colspan="3" class="metric-desc">Mean absolute jerk indicating average structural shock rate and transient severity.</td>
     </tr>
     <tr height="48" style="height: 48px;">
       <td colspan="2" class="metric-name">Mean Gravitational Acceleration Offset (g-bias)</td>
-      <td class="metric-val">\${escapeHTML((meanRawAcc * 9806.65).toFixed(6))}</td>
+      <td class="metric-val">${escapeHTML((meanRawAcc * 9806.65).toFixed(6))}</td>
       <td class="metric-unit">mm/s²</td>
       <td colspan="3" class="metric-desc">Baseline DC component representing constant physical gravity offset (offset at rest).</td>
     </tr>
     <tr height="48" style="height: 48px;">
       <td colspan="2" class="metric-name">Sensor Full-Scale Operating Range</td>
-      <td class="metric-val">[\${escapeHTML((minRawAcc * 9806.65).toFixed(4))}, \${escapeHTML((maxRawAcc * 9806.65).toFixed(4))}]</td>
+      <td class="metric-val">[${escapeHTML((minRawAcc * 9806.65).toFixed(4))}, ${escapeHTML((maxRawAcc * 9806.65).toFixed(4))}]</td>
       <td class="metric-unit">mm/s²</td>
       <td colspan="3" class="metric-desc">Full-scale dynamic measurement range envelope captured by the triaxial accelerometer.</td>
     </tr>
@@ -437,13 +437,13 @@ router.get('/:sessionId', (req, res) => {
       <td colspan="7" class="section-title">DISCRETE-TIME STRUCTURAL VIBRATION RESPONSE</td>
     </tr>
     <tr style="background-color: #334155; color: #ffffff; font-weight: bold;">
-      <td class="table-th" style="text-align: center; padding: 10px 12px;">Sequence Index [n]</td>
-      <td class="table-th" style="padding: 10px 12px;">Timestamp (UTC)</td>
-      <td class="table-th" style="text-align: right; padding: 10px 12px;">Time Offset (t) [s]</td>
-      <td class="table-th" style="text-align: right; padding: 10px 12px;">Frequency Coordinate (f) [Hz]</td>
-      <td class="table-th" style="text-align: right; padding: 10px 12px;">Spectral Acceleration Amplitude [mm/s²]</td>
-      <td class="table-th" style="text-align: right; padding: 10px 12px;">Proper Acceleration Z-axis [mm/s²]</td>
-      <td class="table-th" style="text-align: right; padding: 10px 12px;">Relative Jerk Offset [mm/s²]</td>
+      <th class="table-th">Sequence Index [n]</th>
+      <th class="table-th">Timestamp (UTC)</th>
+      <th class="table-th">Time Offset (t) (s)</th>
+      <th class="table-th">Frequency Coordinate (f) (Hz)</th>
+      <th class="table-th">Spectral Acceleration Amplitude [amplitude] (mm/s²)</th>
+      <th class="table-th">Proper Acceleration Z-axis [rawAcceleration] (mm/s²)</th>
+      <th class="table-th">Relative Jerk Offset [deltaZ] (mm/s²)</th>
     </tr>
 `);
 
@@ -455,9 +455,9 @@ router.get('/:sessionId', (req, res) => {
       <td class="table-td text-val">${escapeHTML(new Date(p.timestamp).toISOString())}</td>
       <td class="table-td num-val">${escapeHTML(relTime)}</td>
       <td class="table-td num-val">${escapeHTML((p.frequency || 0).toFixed(3))}</td>
-      <td class="table-td num-val">\${escapeHTML(((p.amplitude || 0) * 9806.65).toFixed(6))}</td>
-      <td class="table-td num-val">\${escapeHTML(((p.rawAcceleration || 0) * 9806.65).toFixed(6))}</td>
-      <td class="table-td num-val">\${escapeHTML(((p.deltaZ || 0) * 9806.65).toFixed(6))}</td>
+      <td class="table-td num-val">${escapeHTML(((p.amplitude || 0) * 9806.65).toFixed(6))}</td>
+      <td class="table-td num-val">${escapeHTML(((p.rawAcceleration || 0) * 9806.65).toFixed(6))}</td>
+      <td class="table-td num-val">${escapeHTML(((p.deltaZ || 0) * 9806.65).toFixed(6))}</td>
     </tr>`);
       });
 

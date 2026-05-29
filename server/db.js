@@ -241,6 +241,7 @@ function deserializeSession(row) {
     id: row.id,
     _id: row.id, // compatibility alias
     name: row.name,
+    testMass: row.test_mass,
     startTime: row.start_time,
     endTime: row.end_time || null,
     isActive: row.is_active === 1,

@@ -157,12 +157,12 @@ function drawParametersTable(doc, session, zAxisData) {
   const dampingRatio = session.mechanicalProperties?.dampingRatio || (qFactor ? 1 / (2 * qFactor) : null);
 
   const rows = [
-    { name: 'Natural Frequency (fn)', val: session.naturalFrequency ? `\${session.naturalFrequency.toFixed(2)} Hz` : 'N/A', desc: 'Primary dynamic resonance peak of the structural system.' },
-    { name: 'Peak Amplitude', val: session.peakAmplitude ? `\${(session.peakAmplitude * 9806.65).toFixed(4)} mm/s²` : 'N/A', desc: 'Maximum single vertical shock or cycle deviation.' },
+    { name: 'Natural Frequency (fn)', val: session.naturalFrequency ? `${session.naturalFrequency.toFixed(2)} Hz` : 'N/A', desc: 'Primary dynamic resonance peak of the structural system.' },
+    { name: 'Peak Amplitude', val: session.peakAmplitude ? `${(session.peakAmplitude * 9806.65).toFixed(4)} mm/s²` : 'N/A', desc: 'Maximum single vertical shock or cycle deviation.' },
     { name: 'Q Factor (Quality Coefficient)', val: qFactor ? qFactor.toFixed(2) : 'N/A', desc: 'Energy retention index; higher indicates sharp resonance.' },
     { name: 'Damping Ratio (ζ)', val: dampingRatio ? dampingRatio.toFixed(4) : 'N/A', desc: 'Determines rate of decaying vibration transients.' },
-    { name: 'Half-Power Bandwidth', val: bandwidth ? `\${bandwidth.toFixed(3)} Hz` : 'N/A', desc: 'Frequency span representing -3 dB energy drop-off.' },
-    { name: 'RMS Acceleration', val: `\${(stats.rms * 9806.65).toFixed(4)} mm/s²`, desc: 'Average continuous kinetic energy equivalent.' }
+    { name: 'Half-Power Bandwidth', val: bandwidth ? `${bandwidth.toFixed(3)} Hz` : 'N/A', desc: 'Frequency span representing -3 dB energy drop-off.' },
+    { name: 'RMS Acceleration', val: `${(stats.rms * 9806.65).toFixed(4)} mm/s²`, desc: 'Average continuous kinetic energy equivalent.' }
   ];
 
   let currentY = doc.y;
@@ -186,16 +186,24 @@ function drawParametersTable(doc, session, zAxisData) {
 
 // ─── Vector Charts ─────────────────────────────────────────────────────────
 function drawChartsSection(doc, session, zAxisData) {
-  const chartW = 230;
-  const chartH = 120;
-  const chart1X = 54;
-  const chart2X = 311;
-  const chartY = doc.y;
+  const chartW = 487;
+  const chartH = 160;
+  const chartX = 54;
+  
+  // Start charts on a new page as requested
+  doc.addPage();
+  let chartY = doc.y;
 
   // 1. Time-Domain raw Z-Axis G-force
   const sampledZData = sampleData(zAxisData.map(d => (d.deltaZ || 0) * 9806.65), 100);
   const timeLabels = Array.from({ length: sampledZData.length }, (_, i) => i);
-  drawVectorLineChart(doc, 'Time-Domain Vibration Waveform (mm/s² vs. index)', timeLabels, sampledZData, chart1X, chartY, chartW, chartH, '#2563eb');
+  drawVectorLineChart(doc, 'Time-Domain Vibration Waveform (mm/s² vs. index)', timeLabels, sampledZData, chartX, chartY, chartW, chartH, '#2563eb');
+
+  chartY += chartH + 30;
+  if (chartY + chartH > 730) {
+    doc.addPage();
+    chartY = doc.y;
+  }
 
   // 2. Frequency-Domain FFT Spectrum
   const freqs = session.mechanicalProperties?.frequencies || [];
@@ -203,14 +211,14 @@ function drawChartsSection(doc, session, zAxisData) {
   if (freqs.length > 0 && mags.length > 0) {
     const sampledFreqs = sampleData(freqs, 100);
     const sampledMags = sampleData(mags.map(m => m * 9806.65), 100);
-    drawVectorLineChart(doc, 'FFT Frequency Spectrum (Amplitude vs. Hz)', sampledFreqs, sampledMags, chart2X, chartY, chartW, chartH, '#818cf8');
+    drawVectorLineChart(doc, 'FFT Frequency Spectrum (Amplitude vs. Hz)', sampledFreqs, sampledMags, chartX, chartY, chartW, chartH, '#818cf8');
   } else {
     // Fallback if no FFT data is present
-    doc.font('Helvetica-Bold').fontSize(9).fillColor('#64748b').text('FFT Spectrum (Amplitude vs. Hz)', chart2X, chartY - 15);
-    doc.rect(chart2X, chartY, chartW, chartH).fill('#f8fafc');
-    doc.rect(chart2X, chartY, chartW, chartH).lineWidth(0.5).stroke('#e2e8f0');
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('#64748b').text('FFT Spectrum (Amplitude vs. Hz)', chartX, chartY - 15);
+    doc.rect(chartX, chartY, chartW, chartH).fill('#f8fafc');
+    doc.rect(chartX, chartY, chartW, chartH).lineWidth(0.5).stroke('#e2e8f0');
     doc.font('Helvetica-Oblique').fontSize(8.5).fillColor('#94a3b8')
-      .text('No FFT frequency data recorded.', chart2X + 20, chartY + 50, { width: chartW - 40, align: 'center' });
+      .text('No FFT frequency data recorded.', chartX + 20, chartY + (chartH/2) - 5, { width: chartW - 40, align: 'center' });
   }
 
   doc.y = chartY + chartH + 20;

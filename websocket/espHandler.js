@@ -118,6 +118,11 @@ export async function processESPMessage(data, ws = null) {
       // Run High-Res FFT on Server
       const analysis = analyzeBatch(data.data, data.sampleRate || 500);
 
+      const m = session.testMass || 1.0;
+      const omega_n = 2 * Math.PI * analysis.peakFrequency;
+      const stiffness = m * Math.pow(omega_n, 2);
+      const dampingCoefficient = 2 * analysis.dampingRatio * Math.sqrt(stiffness * m);
+
       // Save mechanical properties to session for long-term storage
       db.updateSessionAnalysis(session.id, {
         naturalFrequency: analysis.peakFrequency,
@@ -126,6 +131,8 @@ export async function processESPMessage(data, ws = null) {
            qFactor: analysis.qFactor,
            dampingRatio: analysis.dampingRatio,
            bandwidth: analysis.bandwidth,
+           stiffness: stiffness,
+           dampingCoefficient: dampingCoefficient,
            frequencies: analysis.frequencies,
            magnitudes: analysis.magnitudes
         }
